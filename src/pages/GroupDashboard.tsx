@@ -9,7 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, UserPlus, Heart, LogOut } from "lucide-react";
+import { Users, UserPlus, Heart, LogOut, Clock } from "lucide-react";
+import Timeline from "@/components/timeline/Timeline";
+import AddNote from "@/components/timeline/AddNote";
 import AgreementsList from "@/components/agreements/AgreementsList";
 import CreateAgreement from "@/components/agreements/CreateAgreement";
 import AgreementDetail from "@/components/agreements/AgreementDetail";
@@ -19,6 +21,7 @@ interface MemberRow { id: string; user_id: string; role: string; display_name: s
 interface PersonRow { id: string; label: string; is_primary: boolean; user_id: string | null; }
 
 type AgreementView = { type: "list" } | { type: "create" } | { type: "detail"; agreementId: string };
+type TimelineView = { type: "list" } | { type: "add" };
 
 export default function GroupDashboard() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -32,6 +35,8 @@ export default function GroupDashboard() {
   const [loading, setLoading] = useState(true);
   const [activePersonId, setActivePersonId] = useState<string | null>(null);
   const [agreementView, setAgreementView] = useState<AgreementView>({ type: "list" });
+  const [timelineView, setTimelineView] = useState<TimelineView>({ type: "list" });
+  const [timelineKey, setTimelineKey] = useState(0);
 
   // invite form
   const [inviteUserId, setInviteUserId] = useState("");
@@ -122,6 +127,7 @@ export default function GroupDashboard() {
             <TabsTrigger value="members" className="flex-1">Members</TabsTrigger>
             <TabsTrigger value="persons" className="flex-1">Persons</TabsTrigger>
             <TabsTrigger value="agreements" className="flex-1">Agreements</TabsTrigger>
+            <TabsTrigger value="timeline" className="flex-1">Timeline</TabsTrigger>
           </TabsList>
 
           {/* Members Tab */}
@@ -230,6 +236,27 @@ export default function GroupDashboard() {
                 agreementId={agreementView.agreementId}
                 groupId={groupId!}
                 onBack={() => setAgreementView({ type: "list" })}
+              />
+            )}
+          </TabsContent>
+
+          {/* Timeline Tab */}
+          <TabsContent value="timeline">
+            {timelineView.type === "list" && (
+              <Timeline
+                key={timelineKey}
+                groupId={groupId!}
+                personId={activePersonId}
+                members={members}
+                onAddNote={() => setTimelineView({ type: "add" })}
+              />
+            )}
+            {timelineView.type === "add" && activePersonId && (
+              <AddNote
+                groupId={groupId!}
+                personId={activePersonId}
+                onBack={() => setTimelineView({ type: "list" })}
+                onCreated={() => { setTimelineView({ type: "list" }); setTimelineKey(k => k + 1); }}
               />
             )}
           </TabsContent>
