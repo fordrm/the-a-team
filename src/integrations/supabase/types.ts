@@ -159,6 +159,63 @@ export type Database = {
           },
         ]
       }
+      contact_notes: {
+        Row: {
+          author_user_id: string
+          body: string
+          channel: string | null
+          consent_level: string
+          created_at: string
+          group_id: string
+          id: string
+          indicators: Json
+          occurred_at: string
+          subject_person_id: string
+          visibility_tier: string
+        }
+        Insert: {
+          author_user_id: string
+          body: string
+          channel?: string | null
+          consent_level?: string
+          created_at?: string
+          group_id: string
+          id?: string
+          indicators?: Json
+          occurred_at?: string
+          subject_person_id: string
+          visibility_tier?: string
+        }
+        Update: {
+          author_user_id?: string
+          body?: string
+          channel?: string | null
+          consent_level?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          indicators?: Json
+          occurred_at?: string
+          subject_person_id?: string
+          visibility_tier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_notes_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_notes_subject_person_id_fkey"
+            columns: ["subject_person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_memberships: {
         Row: {
           capabilities: Json
