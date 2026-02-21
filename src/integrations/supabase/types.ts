@@ -14,6 +14,151 @@ export type Database = {
   }
   public: {
     Tables: {
+      agreement_acceptances: {
+        Row: {
+          agreement_id: string
+          agreement_version_id: string
+          created_at: string
+          group_id: string
+          id: string
+          message: string | null
+          person_user_id: string
+          status: string
+        }
+        Insert: {
+          agreement_id: string
+          agreement_version_id: string
+          created_at?: string
+          group_id: string
+          id?: string
+          message?: string | null
+          person_user_id: string
+          status: string
+        }
+        Update: {
+          agreement_id?: string
+          agreement_version_id?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          message?: string | null
+          person_user_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agreement_acceptances_agreement_id_fkey"
+            columns: ["agreement_id"]
+            isOneToOne: false
+            referencedRelation: "agreements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreement_acceptances_agreement_version_id_fkey"
+            columns: ["agreement_version_id"]
+            isOneToOne: false
+            referencedRelation: "agreement_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreement_acceptances_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agreement_versions: {
+        Row: {
+          agreement_id: string
+          created_at: string
+          fields: Json
+          group_id: string
+          id: string
+          proposed_by_user_id: string
+          version_num: number
+        }
+        Insert: {
+          agreement_id: string
+          created_at?: string
+          fields?: Json
+          group_id: string
+          id?: string
+          proposed_by_user_id: string
+          version_num: number
+        }
+        Update: {
+          agreement_id?: string
+          created_at?: string
+          fields?: Json
+          group_id?: string
+          id?: string
+          proposed_by_user_id?: string
+          version_num?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agreement_versions_agreement_id_fkey"
+            columns: ["agreement_id"]
+            isOneToOne: false
+            referencedRelation: "agreements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreement_versions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agreements: {
+        Row: {
+          created_at: string
+          created_by_user_id: string
+          current_version_id: string | null
+          group_id: string
+          id: string
+          status: string
+          subject_person_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id: string
+          current_version_id?: string | null
+          group_id: string
+          id?: string
+          status?: string
+          subject_person_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string
+          current_version_id?: string | null
+          group_id?: string
+          id?: string
+          status?: string
+          subject_person_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agreements_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreements_subject_person_id_fkey"
+            columns: ["subject_person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_memberships: {
         Row: {
           capabilities: Json

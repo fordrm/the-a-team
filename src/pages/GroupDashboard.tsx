@@ -6,29 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Users, UserPlus, Heart, LogOut } from "lucide-react";
+import AgreementsList from "@/components/agreements/AgreementsList";
+import CreateAgreement from "@/components/agreements/CreateAgreement";
+import AgreementDetail from "@/components/agreements/AgreementDetail";
 
-interface GroupRow {
-  id: string;
-  name: string;
-}
+interface GroupRow { id: string; name: string; }
+interface MemberRow { id: string; user_id: string; role: string; display_name: string | null; is_active: boolean; }
+interface PersonRow { id: string; label: string; is_primary: boolean; user_id: string | null; }
 
-interface MemberRow {
-  id: string;
-  user_id: string;
-  role: string;
-  display_name: string | null;
-  is_active: boolean;
-}
-
-interface PersonRow {
-  id: string;
-  label: string;
-  is_primary: boolean;
-  user_id: string | null;
-}
+type AgreementView = { type: "list" } | { type: "create" } | { type: "detail"; agreementId: string };
 
 export default function GroupDashboard() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -40,6 +30,8 @@ export default function GroupDashboard() {
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [persons, setPersons] = useState<PersonRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activePersonId, setActivePersonId] = useState<string | null>(null);
+  const [agreementView, setAgreementView] = useState<AgreementView>({ type: "list" });
 
   // invite form
   const [inviteUserId, setInviteUserId] = useState("");
@@ -53,9 +45,6 @@ export default function GroupDashboard() {
   const [personUserId, setPersonUserId] = useState("");
   const [personOpen, setPersonOpen] = useState(false);
   const [creatingPerson, setCreatingPerson] = useState(false);
-
-  // active person context (local state only)
-  const [activePersonId, setActivePersonId] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!groupId) return;
@@ -83,25 +72,16 @@ export default function GroupDashboard() {
     setInviting(true);
     try {
       const { error } = await supabase.from("group_memberships").insert({
-        group_id: groupId,
-        user_id: inviteUserId,
-        role: inviteRole,
-        display_name: inviteDisplayName || null,
-        is_active: true,
-        capabilities: {},
+        group_id: groupId, user_id: inviteUserId, role: inviteRole,
+        display_name: inviteDisplayName || null, is_active: true, capabilities: {},
       });
       if (error) throw error;
       toast({ title: "Member added" });
-      setInviteOpen(false);
-      setInviteUserId("");
-      setInviteRole("member");
-      setInviteDisplayName("");
+      setInviteOpen(false); setInviteUserId(""); setInviteRole("member"); setInviteDisplayName("");
       fetchData();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
-    } finally {
-      setInviting(false);
-    }
+    } finally { setInviting(false); }
   };
 
   const handleCreatePerson = async (e: React.FormEvent) => {
@@ -110,22 +90,15 @@ export default function GroupDashboard() {
     setCreatingPerson(true);
     try {
       const { error } = await supabase.from("persons").insert({
-        group_id: groupId,
-        label: personLabel,
-        user_id: personUserId || null,
-        is_primary: true,
+        group_id: groupId, label: personLabel, user_id: personUserId || null, is_primary: true,
       });
       if (error) throw error;
       toast({ title: "Person created" });
-      setPersonOpen(false);
-      setPersonLabel("");
-      setPersonUserId("");
+      setPersonOpen(false); setPersonLabel(""); setPersonUserId("");
       fetchData();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
-    } finally {
-      setCreatingPerson(false);
-    }
+    } finally { setCreatingPerson(false); }
   };
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Loading…</p></div>;
@@ -144,103 +117,123 @@ export default function GroupDashboard() {
           </Button>
         </div>
 
-        {/* Members */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Users className="h-5 w-5 text-primary" /> Members
-            </CardTitle>
-            <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" variant="outline">
-                  <UserPlus className="mr-1 h-4 w-4" /> Invite
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>Invite Member</DialogTitle></DialogHeader>
-                <form onSubmit={handleInvite} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>User ID (UUID)</Label>
-                    <Input required value={inviteUserId} onChange={e => setInviteUserId(e.target.value)} placeholder="paste user UUID" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Role</Label>
-                    <Input required value={inviteRole} onChange={e => setInviteRole(e.target.value)} placeholder="member" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Display Name (optional)</Label>
-                    <Input value={inviteDisplayName} onChange={e => setInviteDisplayName(e.target.value)} />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={inviting}>{inviting ? "Adding…" : "Add Member"}</Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </CardHeader>
-          <CardContent>
-            {members.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No members yet.</p>
-            ) : (
-              <ul className="space-y-2">
-                {members.map(m => (
-                  <li key={m.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                    <span className="font-medium">{m.display_name || m.user_id.slice(0, 8) + "…"}</span>
-                    <span className="rounded bg-accent px-2 py-0.5 text-xs text-accent-foreground">{m.role}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="members">
+          <TabsList className="w-full">
+            <TabsTrigger value="members" className="flex-1">Members</TabsTrigger>
+            <TabsTrigger value="persons" className="flex-1">Persons</TabsTrigger>
+            <TabsTrigger value="agreements" className="flex-1">Agreements</TabsTrigger>
+          </TabsList>
 
-        {/* Supported Persons */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Heart className="h-5 w-5 text-primary" /> Supported Persons
-            </CardTitle>
-            <Dialog open={personOpen} onOpenChange={setPersonOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" variant="outline">+ Add Person</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>Create Supported Person</DialogTitle></DialogHeader>
-                <form onSubmit={handleCreatePerson} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Label (name)</Label>
-                    <Input required value={personLabel} onChange={e => setPersonLabel(e.target.value)} placeholder="e.g. Mom" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>User ID (optional)</Label>
-                    <Input value={personUserId} onChange={e => setPersonUserId(e.target.value)} placeholder="UUID if they have an account" />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={creatingPerson}>{creatingPerson ? "Creating…" : "Create Person"}</Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </CardHeader>
-          <CardContent>
-            {persons.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No supported persons yet.</p>
-            ) : (
-              <ul className="space-y-2">
-                {persons.map(p => (
-                  <li
-                    key={p.id}
-                    onClick={() => setActivePersonId(p.id)}
-                    className={`flex cursor-pointer items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors ${
-                      activePersonId === p.id ? "border-primary bg-accent" : "hover:bg-muted"
-                    }`}
-                  >
-                    <span className="font-medium">{p.label}</span>
-                    {activePersonId === p.id && (
-                      <span className="text-xs text-primary font-medium">Active</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
+          {/* Members Tab */}
+          <TabsContent value="members">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Users className="h-5 w-5 text-primary" /> Members
+                </CardTitle>
+                <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline"><UserPlus className="mr-1 h-4 w-4" /> Invite</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader><DialogTitle>Invite Member</DialogTitle></DialogHeader>
+                    <form onSubmit={handleInvite} className="space-y-4">
+                      <div className="space-y-2"><Label>User ID (UUID)</Label><Input required value={inviteUserId} onChange={e => setInviteUserId(e.target.value)} placeholder="paste user UUID" /></div>
+                      <div className="space-y-2"><Label>Role</Label><Input required value={inviteRole} onChange={e => setInviteRole(e.target.value)} placeholder="member" /></div>
+                      <div className="space-y-2"><Label>Display Name (optional)</Label><Input value={inviteDisplayName} onChange={e => setInviteDisplayName(e.target.value)} /></div>
+                      <Button type="submit" className="w-full" disabled={inviting}>{inviting ? "Adding…" : "Add Member"}</Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                {members.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No members yet.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {members.map(m => (
+                      <li key={m.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                        <span className="font-medium">{m.display_name || m.user_id.slice(0, 8) + "…"}</span>
+                        <span className="rounded bg-accent px-2 py-0.5 text-xs text-accent-foreground">{m.role}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Persons Tab */}
+          <TabsContent value="persons">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Heart className="h-5 w-5 text-primary" /> Supported Persons
+                </CardTitle>
+                <Dialog open={personOpen} onOpenChange={setPersonOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline">+ Add Person</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader><DialogTitle>Create Supported Person</DialogTitle></DialogHeader>
+                    <form onSubmit={handleCreatePerson} className="space-y-4">
+                      <div className="space-y-2"><Label>Label (name)</Label><Input required value={personLabel} onChange={e => setPersonLabel(e.target.value)} placeholder="e.g. Mom" /></div>
+                      <div className="space-y-2"><Label>User ID (optional)</Label><Input value={personUserId} onChange={e => setPersonUserId(e.target.value)} placeholder="UUID if they have an account" /></div>
+                      <Button type="submit" className="w-full" disabled={creatingPerson}>{creatingPerson ? "Creating…" : "Create Person"}</Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                {persons.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No supported persons yet.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {persons.map(p => (
+                      <li
+                        key={p.id}
+                        onClick={() => setActivePersonId(p.id)}
+                        className={`flex cursor-pointer items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors ${
+                          activePersonId === p.id ? "border-primary bg-accent" : "hover:bg-muted"
+                        }`}
+                      >
+                        <span className="font-medium">{p.label}</span>
+                        {activePersonId === p.id && <span className="text-xs text-primary font-medium">Active</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Agreements Tab */}
+          <TabsContent value="agreements">
+            {agreementView.type === "list" && (
+              <AgreementsList
+                groupId={groupId!}
+                personId={activePersonId}
+                onCreateNew={() => setAgreementView({ type: "create" })}
+                onViewAgreement={(id) => setAgreementView({ type: "detail", agreementId: id })}
+              />
             )}
-          </CardContent>
-        </Card>
+            {agreementView.type === "create" && activePersonId && (
+              <CreateAgreement
+                groupId={groupId!}
+                personId={activePersonId}
+                onBack={() => setAgreementView({ type: "list" })}
+                onCreated={() => setAgreementView({ type: "list" })}
+              />
+            )}
+            {agreementView.type === "detail" && (
+              <AgreementDetail
+                agreementId={agreementView.agreementId}
+                groupId={groupId!}
+                onBack={() => setAgreementView({ type: "list" })}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
