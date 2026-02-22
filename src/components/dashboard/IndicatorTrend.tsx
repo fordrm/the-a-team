@@ -1,0 +1,128 @@
+import { useEffect, useState, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TrendingUp } from "lucide-react";
+import { INDICATOR_LABEL_MAP, INDICATOR_CATEGORIES } from "@/lib/indicators";
+
+interface Props {
+  groupId: string;
+  personId: string | null;
+}
+
+function getCategoryTextColor(key: string): string {
+  for (const cat of INDICATOR_CATEGORIES) {
+    if (cat.indicators.some(i => i.key === key)) {
+      return cat.color;
+    }
+  }
+  return "text-muted-foreground";
+}
+
+function getCategoryBgColor(key: string): string {
+  for (const cat of INDICATOR_CATEGORIES) {
+    if (cat.indicators.some(i => i.key === key)) {
+      return cat.color.replace("text-", "bg-").replace("500", "100");
+    }
+  }
+  return "bg-muted";
+}
+
+export default function IndicatorTrend({ groupId, personId }: Props) {
+  const [notes, setNotes] = useState<{ indicators: Record<string, boolean>; occurred_at: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [days, setDays] = useState("30");
+
+  useEffect(() => {
+    if (!personId) { setNotes([]); setLoading(false); return; }
+
+    const fetchNotes = async () => {
+      setLoading(true);
+      const since = new Date();
+      since.setDate(since.getDate() - parseInt(days));
+
+      const { data } = await supabase
+        .from("contact_notes")
+        .select("indicators, occurred_at")
+        .eq("group_id", groupId)
+        .eq("subject_person_id", personId)
+        .gte("occurred_at", since.toISOString());
+
+      setNotes((data as any[]) ?? []);
+      setLoading(false);
+    };
+
+    fetchNotes();
+  }, [groupId, personId, days]);
+
+  const ranked = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const note of notes) {
+      if (!note.indicators) continue;
+      for (const [key, val] of Object.entries(note.indicators)) {
+        if (val) counts[key] = (counts[key] || 0) + 1;
+      }
+    }
+    return Object.entries(counts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 8);
+  }, [notes]);
+
+  if (!personId) return null;
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <TrendingUp className="h-5 w-5 text-primary" /> Indicator Trends
+        </CardTitle>
+        <Select value={days} onValueChange={setDays}>
+          <SelectTrigger className="w-24 h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7">7 days</SelectItem>
+            <SelectItem value="14">14 days</SelectItem>
+            <SelectItem value="30">30 days</SelectItem>
+            <SelectItem value="90">90 days</SelectItem>
+          </SelectContent>
+        </Select>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : ranked.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No indicators flagged in the last {days} days.</p>
+        ) : (
+          <div className="space-y-2">
+            {ranked.map(([key, count]) => {
+              const label = INDICATOR_LABEL_MAP[key] || key.replace(/_/g, " ");
+              const maxCount = ranked[0][1] as number;
+              const pct = Math.round((count / maxCount) * 100);
+              return (
+                <div key={key} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="truncate">{label}</span>
+                    <Badge variant="secondary" className="text-xs ml-2 shrink-0">
+                      {count}×
+                    </Badge>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${getCategoryBgColor(key)} opacity-70`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+            <p className="text-xs text-muted-foreground pt-1">
+              Based on {notes.length} note{notes.length !== 1 ? "s" : ""} in the last {days} days
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

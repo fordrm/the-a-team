@@ -286,6 +286,7 @@ export type Database = {
           id: string
           indicators: Json
           occurred_at: string
+          pinned: boolean
           subject_person_id: string
           visibility_tier: string
         }
@@ -299,6 +300,7 @@ export type Database = {
           id?: string
           indicators?: Json
           occurred_at?: string
+          pinned?: boolean
           subject_person_id: string
           visibility_tier?: string
         }
@@ -312,6 +314,7 @@ export type Database = {
           id?: string
           indicators?: Json
           occurred_at?: string
+          pinned?: boolean
           subject_person_id?: string
           visibility_tier?: string
         }
