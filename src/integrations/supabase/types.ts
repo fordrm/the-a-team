@@ -347,6 +347,118 @@ export type Database = {
         }
         Relationships: []
       }
+      intervention_private_details: {
+        Row: {
+          author_user_id: string
+          body: string
+          created_at: string
+          group_id: string
+          id: string
+          intervention_id: string
+          subject_person_id: string
+        }
+        Insert: {
+          author_user_id: string
+          body: string
+          created_at?: string
+          group_id: string
+          id?: string
+          intervention_id: string
+          subject_person_id: string
+        }
+        Update: {
+          author_user_id?: string
+          body?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          intervention_id?: string
+          subject_person_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intervention_private_details_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intervention_private_details_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "interventions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intervention_private_details_subject_person_id_fkey"
+            columns: ["subject_person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interventions: {
+        Row: {
+          created_at: string
+          created_by_user_id: string
+          end_at: string | null
+          group_id: string
+          id: string
+          rationale: string | null
+          start_at: string | null
+          status: string
+          subject_person_id: string
+          title: string
+          type: string
+          visibility_tier: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id: string
+          end_at?: string | null
+          group_id: string
+          id?: string
+          rationale?: string | null
+          start_at?: string | null
+          status?: string
+          subject_person_id: string
+          title: string
+          type?: string
+          visibility_tier?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string
+          end_at?: string | null
+          group_id?: string
+          id?: string
+          rationale?: string | null
+          start_at?: string | null
+          status?: string
+          subject_person_id?: string
+          title?: string
+          type?: string
+          visibility_tier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interventions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interventions_subject_person_id_fkey"
+            columns: ["subject_person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       persons: {
         Row: {
           created_at: string
