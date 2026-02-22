@@ -10,6 +10,7 @@ import CreateGroup from "./pages/CreateGroup";
 import GroupDashboard from "./pages/GroupDashboard";
 import RequestAccess from "./pages/RequestAccess";
 import PersonPortal from "./pages/PersonPortal";
+import AwaitingApproval from "./pages/AwaitingApproval";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/group/:groupId" element={<GroupDashboard />} />
             <Route path="/group/:groupId/request-access" element={<RequestAccess />} />
             <Route path="/person-portal" element={<PersonPortal />} />
+            <Route path="/awaiting-approval" element={<AwaitingApproval />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
