@@ -762,11 +762,10 @@ export type Database = {
       bootstrap_create_group: { Args: { p_name: string }; Returns: string }
       create_agreement_with_version: {
         Args: {
-          p_body: string
           p_created_by: string
+          p_fields: Json
           p_group_id: string
           p_subject_person_id: string
-          p_title: string
         }
         Returns: string
       }
