@@ -128,7 +128,6 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
         await createAlertIfNeeded({
           group_id: groupId,
           subject_person_id: agreement.subject_person_id,
-          created_by_user_id: user.id,
           type: "agreement_declined",
           severity: "tier2",
           title: `Agreement declined: ${(latestVersion.fields as any)?.title || "Untitled"}`,
@@ -176,7 +175,6 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
         await createAlertIfNeeded({
           group_id: groupId,
           subject_person_id: agreement.subject_person_id,
-          created_by_user_id: user.id,
           type: "agreement_modified",
           severity: "tier2",
           title: `Agreement modified: ${modFields.title || "Untitled"}`,

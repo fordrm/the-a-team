@@ -105,7 +105,6 @@ export default function CreateContradiction({ groupId, personId, onBack, onCreat
         await createAlertIfNeeded({
           group_id: groupId,
           subject_person_id: personId,
-          created_by_user_id: user.id,
           type: "contradiction_opened",
           severity: "tier2",
           title: `Contradiction flagged: ${summary.slice(0, 80)}`,
