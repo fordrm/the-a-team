@@ -13,17 +13,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Check, Pencil, ChevronDown, History, X } from "lucide-react";
 import { checkPermission } from "@/lib/checkPermission";
-
-interface VersionFields {
-  title?: string;
-  body?: string;
-  i_will_statement?: string;
-  metric_definition?: string;
-  cadence_or_due_date?: string;
-  check_in_method?: string;
-  support_needed?: string;
-  renegotiation_trigger?: string;
-}
+import type { VersionFields } from "@/types/agreements";
+import { formatCadenceDisplay, formatDurationDisplay } from "@/types/agreements";
 
 interface VersionRow {
   id: string;
@@ -247,18 +238,23 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
   const hasAnyResponse = acceptances.some(a => a.agreement_version_id === latestVersion.id);
   const isTerminal = agreement.status === "declined" || agreement.status === "withdrawn";
 
-  const fieldEntries: { label: string; key: keyof VersionFields }[] = [
-    { label: "Terms", key: "body" },
-    { label: "I will…", key: "i_will_statement" },
-    { label: "Metric", key: "metric_definition" },
-    { label: "Cadence / Due", key: "cadence_or_due_date" },
-    { label: "Check-in", key: "check_in_method" },
-    { label: "Support Needed", key: "support_needed" },
-    { label: "Renegotiation", key: "renegotiation_trigger" },
+  const fieldEntries: { label: string; key: keyof VersionFields; computed?: (f: VersionFields) => string }[] = [
+    { label: "Commitment", key: "i_will_statement" },
+    { label: "Schedule", key: "cadence_or_due_date", computed: formatCadenceDisplay },
+    { label: "Duration", key: "duration", computed: formatDurationDisplay },
+    { label: "How we'll know", key: "metric_definition" },
+    { label: "Check-in method", key: "check_in_method" },
+    { label: "Terms / Context", key: "body" },
+    { label: "Support needed", key: "support_needed" },
+    { label: "Revisit when", key: "renegotiation_trigger" },
   ];
 
   // Only show fields that have values
-  const activeFields = fieldEntries.filter(({ key }) => fields[key]);
+  const activeFields = fieldEntries.filter(({ key, computed }) => {
+    if (computed) return !!computed(fields);
+    const val = fields[key];
+    return val !== undefined && val !== null && val !== "";
+  });
 
   return (
     <Card>
@@ -282,10 +278,12 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-2">Current Version</p>
           <div className="space-y-2">
-            {activeFields.length > 0 ? activeFields.map(({ label, key }) => (
+            {activeFields.length > 0 ? activeFields.map(({ label, key, computed }) => (
               <div key={key}>
                 <p className="text-xs font-medium text-muted-foreground">{label}</p>
-                <p className="text-sm whitespace-pre-wrap">{fields[key]}</p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {computed ? computed(fields) : (typeof fields[key] === "string" ? fields[key] : JSON.stringify(fields[key]))}
+                </p>
               </div>
             )) : (
               <p className="text-sm text-muted-foreground">No content in this version.</p>
@@ -304,17 +302,23 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
             <CollapsibleContent className="mt-2 space-y-3">
               {olderVersions.map(v => {
                 const vFields = v.fields as VersionFields;
-                const vActiveFields = fieldEntries.filter(({ key }) => vFields[key]);
+                const vActiveFields = fieldEntries.filter(({ key, computed }) => {
+                  if (computed) return !!computed(vFields);
+                  const val = vFields[key];
+                  return val !== undefined && val !== null && val !== "";
+                });
                 return (
                   <div key={v.id} className="rounded-md border p-3 space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium">v{v.version_num}</span>
                       <span className="text-xs text-muted-foreground">{formatDate(v.created_at)}</span>
                     </div>
-                    {vActiveFields.map(({ label, key }) => (
+                    {vActiveFields.map(({ label, key, computed }) => (
                       <div key={key}>
                         <p className="text-xs text-muted-foreground">{label}</p>
-                        <p className="text-xs whitespace-pre-wrap">{vFields[key]}</p>
+                        <p className="text-xs whitespace-pre-wrap">
+                          {computed ? computed(vFields) : (typeof vFields[key] === "string" ? vFields[key] : JSON.stringify(vFields[key]))}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -346,7 +350,11 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
               <Check className="mr-1 h-4 w-4" /> Accept
             </Button>
             <Button size="sm" variant="outline" onClick={() => {
-              setModFields({ ...fields });
+              const preFilled = { ...fields };
+              if (fields.cadence && !fields.cadence_or_due_date) {
+                preFilled.cadence_or_due_date = formatCadenceDisplay(fields);
+              }
+              setModFields(preFilled);
               setModifying(true);
             }}>
               <Pencil className="mr-1 h-4 w-4" /> Modify
@@ -394,7 +402,11 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
                 <Check className="mr-1 h-4 w-4" /> Accept Modification
               </Button>
               <Button size="sm" variant="outline" onClick={() => {
-                setProposeFields({ ...fields });
+                const preFilled = { ...fields };
+                if (fields.cadence && !fields.cadence_or_due_date) {
+                  preFilled.cadence_or_due_date = formatCadenceDisplay(fields);
+                }
+                setProposeFields(preFilled);
                 setProposing(true);
               }}>
                 <Pencil className="mr-1 h-4 w-4" /> Counter-Propose
@@ -429,7 +441,11 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
         {!isSubjectPerson && !proposing && !isTerminal && !hasModifiedResponse && (
           <div className="border-t pt-3">
             <Button size="sm" variant="outline" onClick={() => {
-              setProposeFields({ ...fields });
+              const preFilled = { ...fields };
+              if (fields.cadence && !fields.cadence_or_due_date) {
+                preFilled.cadence_or_due_date = formatCadenceDisplay(fields);
+              }
+              setProposeFields(preFilled);
               setProposing(true);
             }}>
               <Pencil className="mr-1 h-4 w-4" /> Propose Update
@@ -442,7 +458,11 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
           <div className="border-t pt-3 space-y-2">
             <p className="text-sm text-muted-foreground">This agreement was declined. You can propose a revised version to re-open negotiation.</p>
             <Button size="sm" variant="outline" onClick={() => {
-              setProposeFields({ ...fields });
+              const preFilled = { ...fields };
+              if (fields.cadence && !fields.cadence_or_due_date) {
+                preFilled.cadence_or_due_date = formatCadenceDisplay(fields);
+              }
+              setProposeFields(preFilled);
               setProposing(true);
             }}>
               <Pencil className="mr-1 h-4 w-4" /> Propose Revised Version

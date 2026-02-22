@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Plus } from "lucide-react";
+import type { VersionFields } from "@/types/agreements";
+import { formatCadenceDisplay, formatDurationDisplay } from "@/types/agreements";
 
 interface AgreementRow {
   id: string;
@@ -12,17 +14,6 @@ interface AgreementRow {
   status: string;
   current_version_id: string | null;
   created_at: string;
-}
-
-interface VersionFields {
-  title?: string;
-  body?: string;
-  i_will_statement?: string;
-  metric_definition?: string;
-  cadence_or_due_date?: string;
-  check_in_method?: string;
-  support_needed?: string;
-  renegotiation_trigger?: string;
 }
 
 interface VersionRow {
@@ -134,9 +125,18 @@ export default function AgreementsList({ groupId, personId, onCreateNew, onViewA
                   onClick={() => onViewAgreement(a.id)}
                   className="flex cursor-pointer items-center justify-between rounded-md border px-3 py-2 text-sm hover:bg-muted transition-colors"
                 >
-                  <div>
-                    <span className="font-medium">{fields?.title || "Untitled"}</span>
-                    {v && <span className="ml-2 text-xs text-muted-foreground">v{v.version_num}</span>}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium truncate">{fields?.title || "Untitled"}</span>
+                      {v && <span className="text-xs text-muted-foreground shrink-0">v{v.version_num}</span>}
+                    </div>
+                    {fields?.i_will_statement && (
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        "{fields.i_will_statement}"
+                        {fields.cadence ? ` · ${formatCadenceDisplay(fields)}` : fields.cadence_or_due_date ? ` · ${fields.cadence_or_due_date}` : ""}
+                        {fields.duration ? ` · ${formatDurationDisplay(fields)}` : ""}
+                      </p>
+                    )}
                   </div>
                   <Badge variant={statusColor(a.status)}>{a.status}</Badge>
                 </li>
