@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/lib/auth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
+import UpdatePassword from "./pages/UpdatePassword";
 import CreateGroup from "./pages/CreateGroup";
 import GroupDashboard from "./pages/GroupDashboard";
 import RequestAccess from "./pages/RequestAccess";
@@ -25,6 +27,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="/create-group" element={<CreateGroup />} />
             <Route path="/group/:groupId" element={<GroupDashboard />} />
             <Route path="/group/:groupId/request-access" element={<RequestAccess />} />
