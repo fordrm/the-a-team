@@ -716,6 +716,10 @@ export type Database = {
         Returns: string
       }
       bootstrap_create_group: { Args: { p_name: string }; Returns: string }
+      delete_supported_person: {
+        Args: { p_group_id: string; p_person_id: string }
+        Returns: undefined
+      }
       invite_member_by_email: {
         Args: {
           p_display_name?: string
