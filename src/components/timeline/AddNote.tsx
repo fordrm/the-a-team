@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
-import { INDICATOR_KEYS } from "@/lib/indicatorKeys";
+import { ArrowLeft, ChevronRight, ChevronDown, Search } from "lucide-react";
+import { INDICATOR_CATEGORIES } from "@/lib/indicators";
 
 const CHANNELS = ["call", "text", "in-person", "video", "other"] as const;
 const VISIBILITY_TIERS = [
@@ -40,10 +41,28 @@ export default function AddNote({ groupId, personId, onBack, onCreated }: Props)
   const [visibility, setVisibility] = useState("supporters_only");
   const [body, setBody] = useState("");
   const [indicators, setIndicators] = useState<Record<string, boolean>>({});
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [indicatorFilter, setIndicatorFilter] = useState("");
 
   const toggleIndicator = (key: string) => {
     setIndicators(prev => ({ ...prev, [key]: !prev[key] }));
   };
+
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
+  };
+
+  const activeCount = (categoryId: string) => {
+    const cat = INDICATOR_CATEGORIES.find(c => c.id === categoryId);
+    if (!cat) return 0;
+    return cat.indicators.filter(i => indicators[i.key]).length;
+  };
+
+  const totalActiveCount = useMemo(() => {
+    return Object.values(indicators).filter(Boolean).length;
+  }, [indicators]);
+
+  const filterLower = indicatorFilter.toLowerCase();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +102,7 @@ export default function AddNote({ groupId, personId, onBack, onCreated }: Props)
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>When did this occur?</Label>
-<Input
+            <Input
               type="datetime-local"
               value={occurredAt}
               onChange={e => setOccurredAt(e.target.value)}
@@ -122,14 +141,75 @@ export default function AddNote({ groupId, personId, onBack, onCreated }: Props)
           </div>
 
           <div className="space-y-2">
-            <Label>Indicators</Label>
-            <div className="space-y-2">
-              {INDICATOR_KEYS.map(({ key, label }) => (
-                <div key={key} className="flex items-center justify-between rounded-md border px-3 py-2">
-                  <span className="text-sm">{label}</span>
-                  <Switch checked={!!indicators[key]} onCheckedChange={() => toggleIndicator(key)} />
-                </div>
-              ))}
+            <div className="flex items-center justify-between">
+              <Label>Indicators</Label>
+              {totalActiveCount > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {totalActiveCount} flagged
+                </Badge>
+              )}
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Filter indicators..."
+                value={indicatorFilter}
+                onChange={e => setIndicatorFilter(e.target.value)}
+                className="pl-9 h-9 text-sm"
+              />
+            </div>
+
+            <div className="space-y-1">
+              {INDICATOR_CATEGORIES.map(category => {
+                const filteredIndicators = filterLower
+                  ? category.indicators.filter(i => i.label.toLowerCase().includes(filterLower))
+                  : category.indicators;
+
+                if (filteredIndicators.length === 0) return null;
+
+                const count = activeCount(category.id);
+                const isExpanded = filterLower ? true : !!expandedCategories[category.id];
+
+                return (
+                  <div key={category.id} className="rounded-md border">
+                    <button
+                      type="button"
+                      onClick={() => toggleCategory(category.id)}
+                      className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span className={`h-2 w-2 rounded-full ${category.color.replace("text-", "bg-")}`} />
+                        <span>{category.label}</span>
+                      </div>
+                      {count > 0 && (
+                        <Badge variant="destructive" className="text-xs px-1.5 py-0 h-5">
+                          {count}
+                        </Badge>
+                      )}
+                    </button>
+
+                    {isExpanded && (
+                      <div className="border-t px-3 pb-2 pt-1 space-y-1">
+                        {filteredIndicators.map(({ key, label }) => (
+                          <div key={key} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-muted/30">
+                            <span className="text-sm">{label}</span>
+                            <Switch
+                              checked={!!indicators[key]}
+                              onCheckedChange={() => toggleIndicator(key)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
