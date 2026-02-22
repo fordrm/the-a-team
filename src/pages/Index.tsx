@@ -101,7 +101,7 @@ function GroupPicker() {
         </div>
         <div className="flex justify-between">
           <button onClick={() => navigate("/create-group")} className="text-sm text-primary hover:underline">+ New Group</button>
-          <button onClick={() => signOutAndReset(navigate)} className="text-sm text-muted-foreground hover:underline">Sign Out</button>
+          <button onClick={() => signOutAndReset()} className="text-sm text-muted-foreground hover:underline">Sign Out</button>
         </div>
       </div>
     </div>
