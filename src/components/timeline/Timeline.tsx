@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Clock, Plus, ChevronDown, ChevronRight, Eye, EyeOff, Shield, Activity, Pin, FileText, Check, Pencil, X, XCircle, Paperclip, AlertTriangle, User } from "lucide-react";
+import { Clock, Plus, ChevronDown, ChevronRight, Eye, EyeOff, Shield, Activity, Pin, FileText, Check, Pencil, X, XCircle, Paperclip, AlertTriangle, User, CalendarRange } from "lucide-react";
 import { INDICATOR_LABEL_MAP, ALL_INDICATORS, getIndicatorBadgeColor } from "@/lib/indicators";
 import { formatCadenceDisplay, formatDurationDisplay, computeFieldDiffs } from "@/types/agreements";
 import type { VersionFields, FieldDiff } from "@/types/agreements";
@@ -22,6 +22,7 @@ interface NoteRow {
   body: string;
   created_at: string;
   pinned: boolean;
+  cycle_id: string | null;
 }
 
 interface InterventionRow {
@@ -138,6 +139,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
   const [loading, setLoading] = useState(true);
   const [personName, setPersonName] = useState<string | null>(null);
   const [personUserId, setPersonUserId] = useState<string | null>(null);
+  const [cycleLabelMap, setCycleLabelMap] = useState<Record<string, string>>({});
 
   // Filters
   const [filterChannel, setFilterChannel] = useState("all");
@@ -156,7 +158,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
       const [notesRes, intRes, accRes, agreeRes] = await Promise.all([
         supabase
           .from("contact_notes")
-          .select("id, author_user_id, visibility_tier, channel, occurred_at, indicators, body, created_at, pinned")
+          .select("id, author_user_id, visibility_tier, channel, occurred_at, indicators, body, created_at, pinned, cycle_id")
           .eq("group_id", groupId)
           .eq("subject_person_id", personId)
           .order("occurred_at", { ascending: false }),
@@ -287,6 +289,22 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
           setPersonName(personData.label);
           setPersonUserId(personData.user_id);
         }
+      }
+
+      // Fetch cycle labels for any notes tagged to a cycle
+      const cycleIdsInNotes = [...new Set(
+        ((notesRes.data as NoteRow[] | null) ?? [])
+          .map(n => n.cycle_id)
+          .filter(Boolean) as string[]
+      )];
+      if (cycleIdsInNotes.length > 0) {
+        const { data: cycleData } = await supabase
+          .from("tracking_cycles")
+          .select("id, label")
+          .in("id", cycleIdsInNotes);
+        const newMap: Record<string, string> = {};
+        (cycleData || []).forEach((c: any) => { newMap[c.id] = c.label; });
+        setCycleLabelMap(newMap);
       }
 
       setItems(sortItems([...noteItems, ...intItems, ...collapsedItems]));
@@ -479,6 +497,12 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                               <span className="font-medium text-foreground">{name}</span>
                               {n.pinned && <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5">Pinned</Badge>}
                               {n.channel && <Badge variant="outline" className="text-xs">{n.channel}</Badge>}
+                              {n.cycle_id && cycleLabelMap[n.cycle_id] && (
+                                <Badge variant="outline" className="text-xs border-primary/30 text-primary">
+                                  <CalendarRange className="h-2.5 w-2.5 mr-0.5" />
+                                  {cycleLabelMap[n.cycle_id]}
+                                </Badge>
+                              )}
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <button
