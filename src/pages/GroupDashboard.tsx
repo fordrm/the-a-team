@@ -144,15 +144,17 @@ export default function GroupDashboard() {
         </div>
 
         <Tabs defaultValue={isSubjectPerson ? "agreements" : "members"}>
-          <TabsList className="w-full">
-            {!isSubjectPerson && <TabsTrigger value="members" className="flex-1">Members</TabsTrigger>}
-            {!isSubjectPerson && <TabsTrigger value="persons" className="flex-1">Persons</TabsTrigger>}
-            <TabsTrigger value="agreements" className="flex-1">Agreements</TabsTrigger>
-            <TabsTrigger value="timeline" className="flex-1">{isSubjectPerson ? "Shared Notes" : "Timeline"}</TabsTrigger>
-            {!isSubjectPerson && <TabsTrigger value="contradictions" className="flex-1">Conflicts</TabsTrigger>}
-            {!isSubjectPerson && <TabsTrigger value="interventions" className="flex-1">Interventions</TabsTrigger>}
-            {!isSubjectPerson && <TabsTrigger value="alerts" className="flex-1">Alerts</TabsTrigger>}
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4">
+            <TabsList className="w-max min-w-full">
+              {!isSubjectPerson && <TabsTrigger value="members" className="text-xs sm:text-sm">Members</TabsTrigger>}
+              {!isSubjectPerson && <TabsTrigger value="persons" className="text-xs sm:text-sm">Persons</TabsTrigger>}
+              <TabsTrigger value="agreements" className="text-xs sm:text-sm">Agreements</TabsTrigger>
+              <TabsTrigger value="timeline" className="text-xs sm:text-sm">{isSubjectPerson ? "Shared Notes" : "Timeline"}</TabsTrigger>
+              {!isSubjectPerson && <TabsTrigger value="contradictions" className="text-xs sm:text-sm">Conflicts</TabsTrigger>}
+              {!isSubjectPerson && <TabsTrigger value="interventions" className="text-xs sm:text-sm">Interventions</TabsTrigger>}
+              {!isSubjectPerson && <TabsTrigger value="alerts" className="text-xs sm:text-sm">Alerts</TabsTrigger>}
+            </TabsList>
+          </div>
 
           {/* Members Tab */}
           {!isSubjectPerson && (
