@@ -14,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle, Activity, Bell, Pencil, Trash2, Mail, User } from "lucide-react";
 import { getRoleLabel } from "@/lib/roleLabels";
+import { checkPermission } from "@/lib/checkPermission";
 import Timeline from "@/components/timeline/Timeline";
 import AddNote from "@/components/timeline/AddNote";
 import AgreementsList from "@/components/agreements/AgreementsList";
@@ -102,6 +103,12 @@ export default function GroupDashboard() {
     if (!groupId) return;
     setDeletingPersonId(personId);
     try {
+      const perms = await checkPermission(user!.id, groupId!);
+      if (!perms.isCoordinator) {
+        toast({ title: "Permission denied", description: "Your access may have changed. Please refresh.", variant: "destructive" });
+        setDeletingPersonId(null);
+        return;
+      }
       const { error } = await supabase.rpc("delete_supported_person", {
         p_group_id: groupId,
         p_person_id: personId,
@@ -159,6 +166,12 @@ export default function GroupDashboard() {
     if (!groupId) return;
     setInviting(true);
     try {
+      const perms = await checkPermission(user!.id, groupId!);
+      if (!perms.isCoordinator) {
+        toast({ title: "Permission denied", description: "Your access may have changed. Please refresh.", variant: "destructive" });
+        setInviting(false);
+        return;
+      }
       const { data, error } = await supabase.functions.invoke("invite-to-group", {
         body: { group_id: groupId, email: inviteEmail, role: inviteRole },
       });
@@ -182,6 +195,12 @@ export default function GroupDashboard() {
     if (!groupId) return;
     setCreatingPerson(true);
     try {
+      const perms = await checkPermission(user!.id, groupId!);
+      if (!perms.isMember) {
+        toast({ title: "Permission denied", description: "Your access may have changed. Please refresh.", variant: "destructive" });
+        setCreatingPerson(false);
+        return;
+      }
       const { data, error } = await supabase.from("persons").insert({
         group_id: groupId, label: personLabel, user_id: null, is_primary: true,
       }).select("id").single();
@@ -204,6 +223,12 @@ export default function GroupDashboard() {
     if (!groupId || !portalInvitePersonId) return;
     setSendingPortalInvite(true);
     try {
+      const perms = await checkPermission(user!.id, groupId!);
+      if (!perms.isCoordinator) {
+        toast({ title: "Permission denied", description: "Your access may have changed. Please refresh.", variant: "destructive" });
+        setSendingPortalInvite(false);
+        return;
+      }
       const { data, error } = await supabase.functions.invoke("invite-supported-person", {
         body: { groupId, personId: portalInvitePersonId, email: portalInviteEmail },
       });

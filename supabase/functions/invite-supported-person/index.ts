@@ -1,15 +1,25 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const ALLOWED_ORIGINS = [
+  "https://the-a-team.lovable.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
 
-function jsonResponse(body: Record<string, unknown>, status = 200) {
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") ?? "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+}
+
+function jsonResponse(req: Request, body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
@@ -18,7 +28,7 @@ Deno.serve(async (req) => {
     req.method, req.url, !!req.headers.get("Authorization"));
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -32,7 +42,7 @@ Deno.serve(async (req) => {
     console.log("[invite-supported-person] step=auth_check");
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonResponse({ error: "Not authenticated", step: "auth_check" }, 401);
+      return jsonResponse(req, { error: "Not authenticated", step: "auth_check" }, 401);
     }
 
     const callerClient = createClient(supabaseUrl, anonKey, {
@@ -41,7 +51,7 @@ Deno.serve(async (req) => {
     const { data: userData, error: userError } = await callerClient.auth.getUser();
     if (userError || !userData?.user) {
       console.error("[invite-supported-person] step=auth_check userError=", userError);
-      return jsonResponse({ error: "Invalid token", step: "auth_check" }, 401);
+      return jsonResponse(req, { error: "Invalid token", step: "auth_check" }, 401);
     }
     const callerId = userData.user.id;
     console.log("[invite-supported-person] step=auth_check callerId=%s", callerId);
@@ -53,7 +63,7 @@ Deno.serve(async (req) => {
       Object.keys(body).join(","), groupId, personId, email);
 
     if (!groupId || !personId || !email) {
-      return jsonResponse({ error: "groupId, personId, and email are required", step: "parse_body" }, 400);
+      return jsonResponse(req, { error: "groupId, personId, and email are required", step: "parse_body" }, 400);
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
@@ -70,7 +80,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!membership) {
-      return jsonResponse({ error: "Only coordinators can invite supported persons", step: "coordinator_check" }, 403);
+      return jsonResponse(req, { error: "Only coordinators can invite supported persons", step: "coordinator_check" }, 403);
     }
 
     // --- Step: verify_person ---
@@ -83,11 +93,11 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!person) {
-      return jsonResponse({ error: "Person not found in this group", step: "verify_person" }, 404);
+      return jsonResponse(req, { error: "Person not found in this group", step: "verify_person" }, 404);
     }
 
     if (person.user_id) {
-      return jsonResponse({ error: "This person already has a linked user account", step: "verify_person" }, 400);
+      return jsonResponse(req, { error: "This person already has a linked user account", step: "verify_person" }, 400);
     }
 
     // --- Step: lookup_user ---
@@ -110,7 +120,7 @@ Deno.serve(async (req) => {
         await adminClient.auth.admin.inviteUserByEmail(normalizedEmail);
       if (inviteError) {
         console.error("[invite-supported-person] step=create_user error=", inviteError);
-        return jsonResponse({ error: inviteError.message, step: "create_user" }, 400);
+        return jsonResponse(req, { error: inviteError.message, step: "create_user" }, 400);
       }
       invitedUserId = inviteData.user.id;
       console.log("[invite-supported-person] step=create_user created user=%s", invitedUserId);
@@ -118,7 +128,6 @@ Deno.serve(async (req) => {
 
     // --- Step: link_person ---
     console.log("[invite-supported-person] step=link_person");
-    // Update person record directly (RPC uses auth.uid() which is null for admin client)
     const { error: updateError } = await adminClient
       .from("persons")
       .update({ user_id: invitedUserId, is_primary: true })
@@ -127,7 +136,7 @@ Deno.serve(async (req) => {
 
     if (updateError) {
       console.error("[invite-supported-person] step=link_person error=", updateError);
-      return jsonResponse({ error: updateError.message, step: "link_person" }, 500);
+      return jsonResponse(req, { error: updateError.message, step: "link_person" }, 500);
     }
 
     // Create baseline consent if none exists
@@ -149,7 +158,7 @@ Deno.serve(async (req) => {
 
     // --- Step: success ---
     console.log("[invite-supported-person] step=success invitedUserId=%s personId=%s", invitedUserId, personId);
-    return jsonResponse({
+    return jsonResponse(req, {
       success: true,
       invitedUserId,
       personId,
@@ -158,6 +167,6 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("[invite-supported-person] step=edge_function unhandled error=", err);
-    return jsonResponse({ error: err.message || "unknown", step: "edge_function" }, 500);
+    return jsonResponse(req, { error: err.message || "unknown", step: "edge_function" }, 500);
   }
 });
