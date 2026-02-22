@@ -6,7 +6,17 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
+  console.log("[invite-supported-person] method=%s url=%s hasAuth=%s",
+    req.method, req.url, !!req.headers.get("Authorization"));
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -14,44 +24,42 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    console.log("[invite-supported-person] env: url=%s hasServiceKey=%s hasAnonKey=%s",
+      !!supabaseUrl, !!serviceRoleKey, !!anonKey);
 
-    // Auth: get caller from JWT
+    // --- Step: auth_check ---
+    console.log("[invite-supported-person] step=auth_check");
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Not authenticated" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Not authenticated", step: "auth_check" }, 401);
     }
 
     const callerClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(
-      authHeader.replace("Bearer ", "")
-    );
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Invalid token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const { data: userData, error: userError } = await callerClient.auth.getUser();
+    if (userError || !userData?.user) {
+      console.error("[invite-supported-person] step=auth_check userError=", userError);
+      return jsonResponse({ error: "Invalid token", step: "auth_check" }, 401);
     }
-    const callerId = claimsData.claims.sub;
+    const callerId = userData.user.id;
+    console.log("[invite-supported-person] step=auth_check callerId=%s", callerId);
 
+    // --- Parse body ---
     const body = await req.json();
     const { groupId, personId, email } = body;
+    console.log("[invite-supported-person] body keys=%s groupId=%s personId=%s email=%s",
+      Object.keys(body).join(","), groupId, personId, email);
 
     if (!groupId || !personId || !email) {
-      return new Response(
-        JSON.stringify({ error: "groupId, personId, and email are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "groupId, personId, and email are required", step: "parse_body" }, 400);
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Verify caller is coordinator
+    // --- Step: coordinator_check ---
+    console.log("[invite-supported-person] step=coordinator_check");
     const { data: membership } = await adminClient
       .from("group_memberships")
       .select("role")
@@ -62,13 +70,11 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!membership) {
-      return new Response(
-        JSON.stringify({ error: "Only coordinators can invite supported persons" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Only coordinators can invite supported persons", step: "coordinator_check" }, 403);
     }
 
-    // Verify person exists in this group
+    // --- Step: verify_person ---
+    console.log("[invite-supported-person] step=verify_person");
     const { data: person } = await adminClient
       .from("persons")
       .select("id, user_id")
@@ -77,20 +83,15 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!person) {
-      return new Response(
-        JSON.stringify({ error: "Person not found in this group" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Person not found in this group", step: "verify_person" }, 404);
     }
 
     if (person.user_id) {
-      return new Response(
-        JSON.stringify({ error: "This person already has a linked user account" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "This person already has a linked user account", step: "verify_person" }, 400);
     }
 
-    // Find or create auth user by email
+    // --- Step: lookup_user ---
+    console.log("[invite-supported-person] step=lookup_user");
     const normalizedEmail = email.trim().toLowerCase();
     const { data: existingUsers } = await adminClient.auth.admin.listUsers();
     const existingUser = existingUsers?.users?.find(
@@ -101,51 +102,62 @@ Deno.serve(async (req) => {
 
     if (existingUser) {
       invitedUserId = existingUser.id;
+      console.log("[invite-supported-person] step=lookup_user found existing user=%s", invitedUserId);
     } else {
-      // Invite user by email - sends them a setup email
+      // --- Step: create_user ---
+      console.log("[invite-supported-person] step=create_user");
       const { data: inviteData, error: inviteError } =
         await adminClient.auth.admin.inviteUserByEmail(normalizedEmail);
       if (inviteError) {
-        return new Response(
-          JSON.stringify({ error: inviteError.message }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.error("[invite-supported-person] step=create_user error=", inviteError);
+        return jsonResponse({ error: inviteError.message, step: "create_user" }, 400);
       }
       invitedUserId = inviteData.user.id;
+      console.log("[invite-supported-person] step=create_user created user=%s", invitedUserId);
     }
 
-    // Link the user to the person record using the RPC
-    // We use the admin client to call the RPC impersonating the coordinator
-    const { data: linkedPersonId, error: linkError } = await adminClient.rpc(
-      "upsert_supported_person_link",
-      {
-        p_group_id: groupId,
-        p_person_id: personId,
-        p_user_id: invitedUserId,
-      }
-    );
+    // --- Step: link_person ---
+    console.log("[invite-supported-person] step=link_person");
+    // Update person record directly (RPC uses auth.uid() which is null for admin client)
+    const { error: updateError } = await adminClient
+      .from("persons")
+      .update({ user_id: invitedUserId, is_primary: true })
+      .eq("id", personId)
+      .eq("group_id", groupId);
 
-    if (linkError) {
-      return new Response(
-        JSON.stringify({ error: linkError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (updateError) {
+      console.error("[invite-supported-person] step=link_person error=", updateError);
+      return jsonResponse({ error: updateError.message, step: "link_person" }, 500);
     }
 
-    return new Response(
-      JSON.stringify({
-        ok: true,
-        invitedUserId,
-        personId,
-        groupId,
-        existingUser: !!existingUser,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    // Create baseline consent if none exists
+    const { data: existingConsent } = await adminClient
+      .from("person_consents")
+      .select("id")
+      .eq("group_id", groupId)
+      .eq("subject_person_id", personId)
+      .maybeSingle();
+
+    if (!existingConsent) {
+      await adminClient.from("person_consents").insert({
+        group_id: groupId,
+        subject_person_id: personId,
+        created_by_user_id: callerId,
+        consent_scope: "shared_notes_and_agreements_only",
+      });
+    }
+
+    // --- Step: success ---
+    console.log("[invite-supported-person] step=success invitedUserId=%s personId=%s", invitedUserId, personId);
+    return jsonResponse({
+      success: true,
+      invitedUserId,
+      personId,
+      groupId,
+      existingUser: !!existingUser,
+    });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err.message || "Internal error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.error("[invite-supported-person] step=edge_function unhandled error=", err);
+    return jsonResponse({ error: err.message || "unknown", step: "edge_function" }, 500);
   }
 });

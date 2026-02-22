@@ -169,6 +169,7 @@ export default function GroupDashboard() {
   const handlePortalInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!groupId || !portalInvitePersonId) return;
+    const DEBUG_INVITES = true;
     setSendingPortalInvite(true);
     try {
       const { data, error } = await supabase.functions.invoke("invite-supported-person", {
@@ -178,8 +179,22 @@ export default function GroupDashboard() {
           email: portalInviteEmail,
         },
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (DEBUG_INVITES) {
+        console.log("[invite-supported-person] response data=", data, "error=", error);
+      }
+      // Handle FunctionsHttpError / FunctionsRelayError / FunctionsFetchError
+      if (error) {
+        const errMsg = typeof error === "object" && error.message ? error.message : String(error);
+        console.error("[invite-supported-person] invoke error:", error);
+        // Try to extract body from the error context (data may contain the JSON)
+        if (data?.error) {
+          throw new Error(`${data.error}${data.step ? ` (step: ${data.step})` : ""}`);
+        }
+        throw new Error(errMsg);
+      }
+      if (data?.error) {
+        throw new Error(`${data.error}${data.step ? ` (step: ${data.step})` : ""}`);
+      }
       const msg = data?.existingUser
         ? `${portalInviteEmail} has been linked. They can sign in to access their portal.`
         : `Invite sent to ${portalInviteEmail}. Once they set a password and sign in, they'll see their portal.`;
@@ -189,7 +204,8 @@ export default function GroupDashboard() {
       setPortalInvitePersonId(null);
       fetchData();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      console.error("[invite-supported-person] caught error:", err);
+      toast({ title: "Invite failed", description: err.message || "Unknown error", variant: "destructive" });
     } finally { setSendingPortalInvite(false); }
   };
 
