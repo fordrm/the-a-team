@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle, Activity, Bell, Pencil, Trash2, Mail } from "lucide-react";
+import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle, Activity, Bell, Pencil, Trash2, Mail, User } from "lucide-react";
 import { getRoleLabel } from "@/lib/roleLabels";
 import Timeline from "@/components/timeline/Timeline";
 import AddNote from "@/components/timeline/AddNote";
@@ -33,11 +33,12 @@ interface MemberRow { id: string; user_id: string; role: string; display_name: s
 interface PersonRow { id: string; label: string; is_primary: boolean; user_id: string | null; }
 
 type AgreementView = { type: "list" } | { type: "create" } | { type: "detail"; agreementId: string };
-const isGroupMemberCheck = (members: MemberRow[], userId: string | undefined) => members.some(m => m.user_id === userId);
 type TimelineView = { type: "list" } | { type: "add" };
 type ContradictionView = { type: "list" } | { type: "create" } | { type: "detail"; id: string };
 type InterventionView = { type: "list" } | { type: "create" } | { type: "detail"; id: string };
 type AlertView = { type: "list" } | { type: "detail"; id: string };
+
+const PERSON_KEY = (gid: string) => `activePerson_${gid}`;
 
 export default function GroupDashboard() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -61,7 +62,7 @@ export default function GroupDashboard() {
   const [alertView, setAlertView] = useState<AlertView>({ type: "list" });
   const [alertKey, setAlertKey] = useState(0);
 
-  // invite form (members only - coordinator/supporter)
+  // invite form
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("supporter");
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -72,7 +73,7 @@ export default function GroupDashboard() {
   const [personOpen, setPersonOpen] = useState(false);
   const [creatingPerson, setCreatingPerson] = useState(false);
 
-  // invite supported person portal access
+  // portal invite
   const [portalInviteOpen, setPortalInviteOpen] = useState(false);
   const [portalInvitePersonId, setPortalInvitePersonId] = useState<string | null>(null);
   const [portalInviteEmail, setPortalInviteEmail] = useState("");
@@ -85,6 +86,18 @@ export default function GroupDashboard() {
   const [savingName, setSavingName] = useState(false);
   const [deletingPersonId, setDeletingPersonId] = useState<string | null>(null);
 
+  // Persist active person in localStorage
+  const selectPerson = (id: string | null) => {
+    setActivePersonId(id);
+    if (groupId) {
+      if (id) {
+        try { localStorage.setItem(PERSON_KEY(groupId), id); } catch (_) {}
+      } else {
+        try { localStorage.removeItem(PERSON_KEY(groupId)); } catch (_) {}
+      }
+    }
+  };
+
   const handleDeletePerson = async (personId: string) => {
     if (!groupId) return;
     setDeletingPersonId(personId);
@@ -95,7 +108,7 @@ export default function GroupDashboard() {
       });
       if (error) throw error;
       toast({ title: "Person deleted", description: "Supported person and all related data removed." });
-      if (activePersonId === personId) setActivePersonId(null);
+      if (activePersonId === personId) selectPerson(null);
       fetchData();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -118,7 +131,24 @@ export default function GroupDashboard() {
     }
     setGroup(gRes.data);
     setMembers(mRes.data ?? []);
-    setPersons(pRes.data ?? []);
+    const fetchedPersons = pRes.data ?? [];
+    setPersons(fetchedPersons);
+
+    // Restore or validate persisted person selection
+    if (groupId) {
+      const stored = localStorage.getItem(PERSON_KEY(groupId));
+      if (stored && fetchedPersons.some(p => p.id === stored)) {
+        setActivePersonId(stored);
+      } else if (fetchedPersons.length === 1) {
+        // Auto-select if only one person
+        setActivePersonId(fetchedPersons[0].id);
+        try { localStorage.setItem(PERSON_KEY(groupId), fetchedPersons[0].id); } catch (_) {}
+      } else {
+        setActivePersonId(null);
+        try { localStorage.removeItem(PERSON_KEY(groupId)); } catch (_) {}
+      }
+    }
+
     setLoading(false);
   };
 
@@ -130,11 +160,7 @@ export default function GroupDashboard() {
     setInviting(true);
     try {
       const { data, error } = await supabase.functions.invoke("invite-to-group", {
-        body: {
-          group_id: groupId,
-          email: inviteEmail,
-          role: inviteRole,
-        },
+        body: { group_id: groupId, email: inviteEmail, role: inviteRole },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -156,13 +182,18 @@ export default function GroupDashboard() {
     if (!groupId) return;
     setCreatingPerson(true);
     try {
-      const { error } = await supabase.from("persons").insert({
+      const { data, error } = await supabase.from("persons").insert({
         group_id: groupId, label: personLabel, user_id: null, is_primary: true,
-      });
+      }).select("id").single();
       if (error) throw error;
       toast({ title: "Person created" });
-      setPersonOpen(false); setPersonLabel("");
+      setPersonOpen(false);
+      setPersonLabel("");
       fetchData();
+      // Auto-select the newly created person
+      if (data?.id) {
+        selectPerson(data.id);
+      }
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally { setCreatingPerson(false); }
@@ -171,24 +202,13 @@ export default function GroupDashboard() {
   const handlePortalInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!groupId || !portalInvitePersonId) return;
-    const DEBUG_INVITES = true;
     setSendingPortalInvite(true);
     try {
       const { data, error } = await supabase.functions.invoke("invite-supported-person", {
-        body: {
-          groupId,
-          personId: portalInvitePersonId,
-          email: portalInviteEmail,
-        },
+        body: { groupId, personId: portalInvitePersonId, email: portalInviteEmail },
       });
-      if (DEBUG_INVITES) {
-        console.log("[invite-supported-person] response data=", data, "error=", error);
-      }
-      // Handle FunctionsHttpError / FunctionsRelayError / FunctionsFetchError
       if (error) {
         const errMsg = typeof error === "object" && error.message ? error.message : String(error);
-        console.error("[invite-supported-person] invoke error:", error);
-        // Try to extract body from the error context (data may contain the JSON)
         if (data?.error) {
           throw new Error(`${data.error}${data.step ? ` (step: ${data.step})` : ""}`);
         }
@@ -206,16 +226,27 @@ export default function GroupDashboard() {
       setPortalInvitePersonId(null);
       fetchData();
     } catch (err: any) {
-      console.error("[invite-supported-person] caught error:", err);
       toast({ title: "Invite failed", description: err.message || "Unknown error", variant: "destructive" });
     } finally { setSendingPortalInvite(false); }
   };
 
-  // Derived: is current user the supported person for active person? Is coordinator?
+  // Derived
   const isSubjectPerson = activePersonId ? persons.find(p => p.id === activePersonId)?.user_id === user?.id : false;
   const isCoordinator = members.some(m => m.user_id === user?.id && m.role === "coordinator");
+  const isMember = members.some(m => m.user_id === user?.id);
+  const activePersonLabel = persons.find(p => p.id === activePersonId)?.label;
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Loading…</p></div>;
+
+  const memberDisplayName = (m: MemberRow) => {
+    if (m.display_name) return m.display_name;
+    if (m.user_id === user?.id) return "You";
+    return `Unnamed · ${m.user_id.slice(0, 6)}`;
+  };
+
+  // Tabs that need a person selected
+  const personRequiredTabs = ["agreements", "timeline", "contradictions", "interventions", "alerts"];
+  const needsPersonSelector = !isSubjectPerson && personRequiredTabs.includes(activeTab);
 
   return (
     <div className="min-h-screen px-4 py-8">
@@ -230,6 +261,39 @@ export default function GroupDashboard() {
             <LogOut className="mr-1 h-4 w-4" /> Sign Out
           </Button>
         </div>
+
+        {/* Active Person Selector — shown above tabs when relevant */}
+        {!isSubjectPerson && persons.length > 0 && (
+          <div className="flex items-center gap-3 rounded-md border border-border bg-muted/50 px-3 py-2">
+            <User className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm text-muted-foreground shrink-0">Viewing:</span>
+            <Select value={activePersonId ?? ""} onValueChange={(val) => selectPerson(val || null)}>
+              <SelectTrigger className="h-8 flex-1">
+                <SelectValue placeholder="Choose a supported person" />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50">
+                {persons.map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* No persons CTA */}
+        {!isSubjectPerson && persons.length === 0 && personRequiredTabs.includes(activeTab) && (
+          <Card>
+            <CardContent className="py-6 text-center space-y-3">
+              <p className="text-sm font-medium">No supported persons yet</p>
+              <p className="text-sm text-muted-foreground">Add a supported person first to begin coordinating care.</p>
+              {isCoordinator && (
+                <Button size="sm" variant="outline" onClick={() => { setActiveTab("persons"); setPersonOpen(true); }}>
+                  + Add Supported Person
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           {/* Mobile: dropdown */}
@@ -301,12 +365,11 @@ export default function GroupDashboard() {
                   <ul className="space-y-2">
                     {members.map(m => {
                       const isSelf = m.user_id === user?.id;
-                      const displayName = m.display_name || (isSelf ? "You" : `Team member`);
-                      const canEdit = isSelf || (isCoordinator && !m.display_name);
+                      const canEdit = isSelf || isCoordinator;
                       return (
                         <li key={m.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">{displayName}</span>
+                            <span className="font-medium">{memberDisplayName(m)}</span>
                             {canEdit && (
                               <button
                                 type="button"
@@ -318,7 +381,7 @@ export default function GroupDashboard() {
                               </button>
                             )}
                           </div>
-                          <span className="rounded bg-accent px-2 py-0.5 text-xs text-accent-foreground">{getRoleLabel(m.role)}</span>
+                          <Badge variant="secondary" className="text-xs">{getRoleLabel(m.role)}</Badge>
                         </li>
                       );
                     })}
@@ -394,7 +457,7 @@ export default function GroupDashboard() {
                     {persons.map(p => (
                       <li
                         key={p.id}
-                        onClick={() => setActivePersonId(p.id)}
+                        onClick={() => selectPerson(p.id)}
                         className={`flex cursor-pointer items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors ${
                           activePersonId === p.id ? "border-primary bg-accent" : "hover:bg-muted"
                         }`}
@@ -407,7 +470,6 @@ export default function GroupDashboard() {
                         </div>
                         <div className="flex items-center gap-2">
                           {activePersonId === p.id && <span className="text-xs text-primary font-medium">Active</span>}
-                          {/* Invite Portal Access button - only for coordinators, only if no user linked */}
                           {isCoordinator && !p.user_id && (
                             <button
                               type="button"
@@ -501,7 +563,7 @@ export default function GroupDashboard() {
               <AgreementsList
                 groupId={groupId!}
                 personId={activePersonId}
-                isGroupMember={isGroupMemberCheck(members, user?.id)}
+                isGroupMember={isMember}
                 onCreateNew={() => setAgreementView({ type: "create" })}
                 onViewAgreement={(id) => setAgreementView({ type: "detail", agreementId: id })}
               />
@@ -533,7 +595,7 @@ export default function GroupDashboard() {
                 groupId={groupId!}
                 personId={activePersonId}
                 members={members}
-                isGroupMember={isGroupMemberCheck(members, user?.id)}
+                isGroupMember={isMember}
                 onAddNote={() => setTimelineView({ type: "add" })}
               />
             )}
