@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Clock, Plus, ChevronDown, Eye, EyeOff, Shield, Activity } from "lucide-react";
+import { INDICATOR_LABEL_MAP } from "@/lib/indicators";
 
 interface NoteRow {
   id: string;
@@ -136,7 +137,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                 const n = item.data;
                 const indicatorKeys = Object.entries(n.indicators || {})
                   .filter(([, v]) => v)
-                  .map(([k]) => k.replace(/_/g, " "));
+                  .map(([k]) => INDICATOR_LABEL_MAP[k] || k.replace(/_/g, " "));
                 return (
                   <li key={`note-${n.id}`} className="rounded-md border p-3 space-y-2">
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
