@@ -458,6 +458,7 @@ export default function GroupDashboard() {
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Heart className="h-5 w-5 text-primary" /> Supported Persons
                 </CardTitle>
+                {isCoordinator && (
                 <Dialog open={personOpen} onOpenChange={setPersonOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm" variant="outline">+ Add Person</Button>
@@ -470,6 +471,7 @@ export default function GroupDashboard() {
                     </form>
                   </DialogContent>
                 </Dialog>
+                )}
               </CardHeader>
               <CardContent>
                 {persons.length === 0 ? (

@@ -73,6 +73,20 @@ export default function PersonPortal() {
         .eq("user_id", user.id);
 
       if (!persons || persons.length === 0) {
+        // Not a supported person — check if they're a group member (coordinator/supporter)
+        const { data: membership } = await supabase
+          .from("group_memberships")
+          .select("group_id")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .limit(1);
+
+        if (membership && membership.length > 0) {
+          navigate(`/group/${membership[0].group_id}`, { replace: true });
+          return;
+        }
+
+        // No person record and no membership — genuinely awaiting link
         setChecking(false);
         return;
       }
@@ -106,6 +120,9 @@ export default function PersonPortal() {
       setAgreements(agreementsData ?? []);
 
       if (agreementsData && agreementsData.length > 0) {
+        const vMap: Record<string, AgreementVersion> = {};
+
+        // Fetch versions for agreements with current_version_id set
         const versionIds = agreementsData
           .map((a) => a.current_version_id)
           .filter(Boolean) as string[];
@@ -114,12 +131,29 @@ export default function PersonPortal() {
             .from("agreement_versions")
             .select("id, fields, version_num")
             .in("id", versionIds);
-          const vMap: Record<string, AgreementVersion> = {};
           (versionsData ?? []).forEach((v: any) => {
             vMap[v.id] = v;
           });
-          setVersions(vMap);
         }
+
+        // Fallback: for agreements without current_version_id, fetch latest version
+        const missingVersionAgreements = agreementsData.filter(
+          (a) => !a.current_version_id
+        );
+        for (const a of missingVersionAgreements) {
+          const { data: latestVersion } = await supabase
+            .from("agreement_versions")
+            .select("id, fields, version_num")
+            .eq("agreement_id", a.id)
+            .order("version_num", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (latestVersion) {
+            vMap[`fallback-${a.id}`] = latestVersion as unknown as AgreementVersion;
+          }
+        }
+
+        setVersions(vMap);
       }
 
       setChecking(false);
@@ -258,7 +292,9 @@ export default function PersonPortal() {
             ) : (
               <ul className="space-y-3">
                 {agreements.map((a) => {
-                  const version = a.current_version_id ? versions[a.current_version_id] : null;
+                  const version = a.current_version_id
+                    ? versions[a.current_version_id]
+                    : versions[`fallback-${a.id}`] ?? null;
                   const fields = version?.fields as Record<string, string> | undefined;
                   return (
                     <li key={a.id} className="rounded-md border px-3 py-2">
