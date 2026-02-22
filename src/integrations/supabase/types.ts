@@ -159,6 +159,81 @@ export type Database = {
           },
         ]
       }
+      alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by_user_id: string | null
+          body: string | null
+          created_at: string
+          created_by_user_id: string
+          group_id: string
+          id: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by_user_id: string | null
+          severity: string
+          source_id: string | null
+          source_table: string | null
+          status: string
+          subject_person_id: string
+          title: string
+          type: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by_user_id?: string | null
+          body?: string | null
+          created_at?: string
+          created_by_user_id: string
+          group_id: string
+          id?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          severity?: string
+          source_id?: string | null
+          source_table?: string | null
+          status?: string
+          subject_person_id: string
+          title: string
+          type: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by_user_id?: string | null
+          body?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          group_id?: string
+          id?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          severity?: string
+          source_id?: string | null
+          source_table?: string | null
+          status?: string
+          subject_person_id?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alerts_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_subject_person_id_fkey"
+            columns: ["subject_person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_notes: {
         Row: {
           author_user_id: string

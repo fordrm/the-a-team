@@ -86,7 +86,7 @@ export default function CreateContradiction({ groupId, personId, onBack, onCreat
     if (!user) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("contradictions").insert({
+      const { data: inserted, error } = await supabase.from("contradictions").insert({
         group_id: groupId,
         subject_person_id: personId,
         created_by_user_id: user.id,
@@ -96,8 +96,24 @@ export default function CreateContradiction({ groupId, personId, onBack, onCreat
         details: details || null,
         related_note_ids: selectedNoteIds,
         related_agreement_ids: selectedAgreementIds,
-      });
+      }).select("id").single();
       if (error) throw error;
+
+      // Best-effort alert generation (only succeeds for coordinators)
+      if (inserted) {
+        await supabase.from("alerts").insert({
+          group_id: groupId,
+          subject_person_id: personId,
+          created_by_user_id: user.id,
+          type: "contradiction_opened",
+          severity: "tier2",
+          title: `Contradiction flagged: ${summary.slice(0, 80)}`,
+          body: details || null,
+          source_table: "contradictions",
+          source_id: inserted.id,
+        });
+      }
+
       toast({ title: "Contradiction flagged" });
       onCreated();
     } catch (err: any) {
