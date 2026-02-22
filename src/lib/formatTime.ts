@@ -50,3 +50,31 @@ export function formatFullDateTime(dateStr: string): string {
     hour12: true,
   });
 }
+
+/**
+ * Returns a human-readable date group label for timeline grouping.
+ * - Same calendar day as now: "Today"
+ * - Yesterday: "Yesterday"
+ * - Within this calendar week (Mon–Sun): day name, e.g. "Wednesday"
+ * - Within this calendar year: "Feb 15"
+ * - Older: "Feb 15, 2025"
+ */
+export function getDateGroupLabel(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const todayStart = startOfDay(now);
+  const dateStart = startOfDay(date);
+  const diffDays = Math.floor((todayStart.getTime() - dateStart.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return date.toLocaleString("en-US", { weekday: "long" });
+
+  const sameYear = date.getFullYear() === now.getFullYear();
+  const month = date.toLocaleString("en-US", { month: "short" });
+  const day = date.getDate();
+
+  return sameYear ? `${month} ${day}` : `${month} ${day}, ${date.getFullYear()}`;
+}

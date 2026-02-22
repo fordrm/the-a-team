@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from "react";
-import { formatRelativeTime, formatFullDateTime } from "@/lib/formatTime";
+import React, { useEffect, useState, useMemo } from "react";
+import { formatRelativeTime, formatFullDateTime, getDateGroupLabel } from "@/lib/formatTime";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,6 +54,7 @@ interface Props {
   members: { user_id: string; display_name: string | null }[];
   onAddNote: () => void;
   isGroupMember?: boolean;
+  lastSeenAt?: string | null;
 }
 
 const visibilityIcon = (tier: string) => {
@@ -100,15 +101,15 @@ function sortItems(items: TimelineItem[]): TimelineItem[] {
   });
 }
 
-const AGREEMENT_STATUS_CONFIG: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
-  created: { icon: <FileText className="h-3 w-3 text-blue-500" />, label: "Agreement created", color: "border-blue-200 bg-blue-50" },
-  accepted: { icon: <Check className="h-3 w-3 text-green-500" />, label: "Agreement accepted", color: "border-green-200 bg-green-50" },
-  modified: { icon: <Pencil className="h-3 w-3 text-amber-500" />, label: "Modification proposed", color: "border-amber-200 bg-amber-50" },
-  declined: { icon: <X className="h-3 w-3 text-red-500" />, label: "Agreement declined", color: "border-red-200 bg-red-50" },
-  withdrawn: { icon: <XCircle className="h-3 w-3 text-gray-500" />, label: "Agreement withdrawn", color: "border-gray-200 bg-gray-50" },
+const AGREEMENT_STATUS_CONFIG: Record<string, { icon: React.ReactNode; label: string }> = {
+  created: { icon: <FileText className="h-3 w-3 text-blue-500" />, label: "Agreement created" },
+  accepted: { icon: <Check className="h-3 w-3 text-green-500" />, label: "Agreement accepted" },
+  modified: { icon: <Pencil className="h-3 w-3 text-amber-500" />, label: "Modification proposed" },
+  declined: { icon: <X className="h-3 w-3 text-red-500" />, label: "Agreement declined" },
+  withdrawn: { icon: <XCircle className="h-3 w-3 text-gray-500" />, label: "Agreement withdrawn" },
 };
 
-export default function Timeline({ groupId, personId, members, onAddNote, isGroupMember = true }: Props) {
+export default function Timeline({ groupId, personId, members, onAddNote, isGroupMember = true, lastSeenAt }: Props) {
   const [items, setItems] = useState<TimelineItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [personName, setPersonName] = useState<string | null>(null);
@@ -163,7 +164,6 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
         data: i,
       }));
 
-      // Build agreement title map
       const agreementIds = (agreeRes.data ?? []).map((a: any) => a.id);
       let titleMap: Record<string, string> = {};
       if (agreementIds.length > 0) {
@@ -179,7 +179,6 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
         });
       }
 
-      // Filter acceptances to only those for this person's agreements
       const agreementIdSet = new Set(agreementIds);
       const rawAcceptances = (accRes.data ?? []).filter((a: any) => agreementIdSet.has(a.agreement_id));
 
@@ -211,7 +210,6 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
         } as AgreementEventRow,
       }));
 
-      // Fetch supported person's display name for agreement events
       if (personId) {
         const { data: personData } = await supabase
           .from("persons")
@@ -364,15 +362,47 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
         ) : (
           <TooltipProvider>
             <ul className="space-y-3">
-              {visibleItems.map(item => {
+              {visibleItems.map((item, index) => {
+                // Date group header
+                const currentGroup = getDateGroupLabel(item.date);
+                const prevGroup = index > 0 ? getDateGroupLabel(visibleItems[index - 1].date) : null;
+                const showDateHeader = currentGroup !== prevGroup;
+
+                const dateHeader = showDateHeader ? (
+                  <li key={`date-${currentGroup}-${index}`} className="flex items-center gap-3 py-1">
+                    <div className="flex-1 border-t border-border" />
+                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{currentGroup}</span>
+                    <div className="flex-1 border-t border-border" />
+                  </li>
+                ) : null;
+
+                // "New since last visit" divider
+                const isNew = lastSeenAt ? new Date(item.date) > new Date(lastSeenAt) : false;
+                const prevIsNew = index > 0 && lastSeenAt
+                  ? new Date(visibleItems[index - 1].date) > new Date(lastSeenAt)
+                  : false;
+                const showNewDivider = index > 0 && !isNew && prevIsNew;
+
+                const newDivider = showNewDivider ? (
+                  <li key={`new-divider-${index}`} className="flex items-center gap-3 py-1">
+                    <div className="flex-1 border-t border-blue-300" />
+                    <span className="text-xs font-medium text-blue-500 whitespace-nowrap">New since last visit ↑</span>
+                    <div className="flex-1 border-t border-blue-300" />
+                  </li>
+                ) : null;
+
+                const newClass = isNew ? "border-l-2 border-l-blue-400" : "";
+
+                let itemElement: React.ReactNode = null;
+
                 if (item.kind === "note") {
                   const n = item.data;
                   const indicatorKeys = Object.entries(n.indicators || {})
                     .filter(([, v]) => v)
                     .map(([k]) => INDICATOR_LABEL_MAP[k] || k.replace(/_/g, " "));
                   const name = authorName(n.author_user_id);
-                  return (
-                    <li key={`note-${n.id}`} className={`rounded-md border p-3 space-y-2 ${n.pinned ? "border-primary/30 bg-primary/5" : ""}`}>
+                  itemElement = (
+                    <li key={`note-${n.id}`} className={`rounded-md border p-3 space-y-2 ${n.pinned ? "border-primary/30 bg-primary/5" : ""} ${newClass}`}>
                       <div className="flex items-start gap-3">
                         <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${getAvatarColor(n.author_user_id)}`}>
                           {getInitials(name)}
@@ -431,8 +461,8 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                   );
                 } else if (item.kind === "intervention") {
                   const i = item.data;
-                  return (
-                    <li key={`int-${i.id}`} className="rounded-md border border-primary/20 bg-primary/5 p-3 space-y-1">
+                  itemElement = (
+                    <li key={`int-${i.id}`} className={`rounded-md border border-primary/20 bg-primary/5 p-3 space-y-1 ${newClass}`}>
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <Activity className="h-3 w-3 text-primary" />
@@ -455,27 +485,39 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                 } else if (item.kind === "agreement_event") {
                   const e = item.data as AgreementEventRow;
                   const config = AGREEMENT_STATUS_CONFIG[e.status] || AGREEMENT_STATUS_CONFIG.created;
-                  return (
-                    <li key={`agree-${e.id}`} className={`rounded-md border p-3 space-y-1 ${config.color}`}>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          {config.icon}
-                          <span className="font-medium text-foreground">{config.label}</span>
-                        </div>
+                  itemElement = (
+                    <li key={`agree-${e.id}`} className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-border/60 px-3 py-2 text-xs text-muted-foreground ${newClass}`}>
+                      {config.icon}
+                      <span className="font-medium text-foreground">{config.label}</span>
+                      <span className="text-muted-foreground/50">·</span>
+                      <span className="text-foreground">{e.agreement_title}</span>
+                      {e.message && (
+                        <>
+                          <span className="text-muted-foreground/50">·</span>
+                          <span className="italic">"{e.message}"</span>
+                        </>
+                      )}
+                      <span className="ml-auto flex items-center gap-1.5 shrink-0">
+                        <span>{authorName(e.person_user_id)}</span>
+                        <span className="text-muted-foreground/50">·</span>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span>{formatRelativeTime(e.created_at)}</span>
                           </TooltipTrigger>
                           <TooltipContent>{formatFullDateTime(e.created_at)}</TooltipContent>
                         </Tooltip>
-                      </div>
-                      <p className="text-sm font-medium">{e.agreement_title}</p>
-                      {e.message && <p className="text-sm text-muted-foreground italic">"{e.message}"</p>}
-                      <p className="text-xs text-muted-foreground">by {authorName(e.person_user_id)}</p>
+                      </span>
                     </li>
                   );
                 }
-                return null;
+
+                return (
+                  <React.Fragment key={`frag-${item.kind}-${item.kind === "note" ? item.data.id : item.kind === "intervention" ? item.data.id : (item.data as AgreementEventRow).id}`}>
+                    {dateHeader}
+                    {newDivider}
+                    {itemElement}
+                  </React.Fragment>
+                );
               })}
             </ul>
           </TooltipProvider>
