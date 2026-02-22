@@ -41,7 +41,7 @@ interface AgreementVersion {
 }
 
 export default function PersonPortal() {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [personInfo, setPersonInfo] = useState<PersonInfo | null>(null);
@@ -168,7 +168,7 @@ export default function PersonPortal() {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Button variant="ghost" size="sm" onClick={() => signOutAndReset()}>
+            <Button variant="ghost" size="sm" onClick={signOut}>
               <LogOut className="mr-1 h-4 w-4" /> Sign Out
             </Button>
           </CardContent>
@@ -198,7 +198,7 @@ export default function PersonPortal() {
               </p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => signOutAndReset()}>
+          <Button variant="ghost" size="sm" onClick={signOut}>
             <LogOut className="mr-1 h-4 w-4" /> Sign Out
           </Button>
         </div>

@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Check, Pencil } from "lucide-react";
+import { ArrowLeft, Check, Pencil, ChevronDown, History } from "lucide-react";
 
 interface VersionFields {
   title?: string;
@@ -20,6 +21,14 @@ interface VersionFields {
   check_in_method?: string;
   support_needed?: string;
   renegotiation_trigger?: string;
+}
+
+interface VersionRow {
+  id: string;
+  version_num: number;
+  fields: VersionFields;
+  proposed_by_user_id: string;
+  created_at: string;
 }
 
 interface Props {
@@ -33,7 +42,7 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
   const { toast } = useToast();
 
   const [agreement, setAgreement] = useState<any>(null);
-  const [latestVersion, setLatestVersion] = useState<any>(null);
+  const [allVersions, setAllVersions] = useState<VersionRow[]>([]);
   const [acceptances, setAcceptances] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubjectPerson, setIsSubjectPerson] = useState(false);
@@ -49,16 +58,18 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
   const [proposing, setProposing] = useState(false);
   const [proposeBody, setProposeBody] = useState("");
 
+  // version history
+  const [historyOpen, setHistoryOpen] = useState(false);
+
   const fetchAll = async () => {
     setLoading(true);
     const [aRes, vRes, accRes] = await Promise.all([
       supabase.from("agreements").select("*").eq("id", agreementId).single(),
-      supabase.from("agreement_versions").select("*").eq("agreement_id", agreementId).order("version_num", { ascending: false }).limit(1),
+      supabase.from("agreement_versions").select("*").eq("agreement_id", agreementId).order("version_num", { ascending: false }),
       supabase.from("agreement_acceptances").select("*").eq("agreement_id", agreementId).order("created_at", { ascending: false }),
     ]);
     setAgreement(aRes.data);
-    const v = vRes.data?.[0] ?? null;
-    setLatestVersion(v);
+    setAllVersions((vRes.data ?? []) as VersionRow[]);
     setAcceptances(accRes.data ?? []);
 
     // check if current user is the subject person
@@ -70,7 +81,6 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
         .single();
       setIsSubjectPerson(person?.user_id === user.id);
 
-      // check coordinator
       const { data: mem } = await supabase
         .from("group_memberships")
         .select("role")
@@ -98,7 +108,6 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
       });
       if (error) throw error;
 
-      // coordinator auto-sets current_version_id if current user is also coordinator
       if (isCoordinator) {
         await supabase.from("agreements").update({
           current_version_id: latestVersion.id,
@@ -128,7 +137,6 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
       }).select("id").single();
       if (error) throw error;
 
-      // Centralized alert generation with dedupe
       if (acc) {
         await createAlertIfNeeded({
           group_id: groupId,
@@ -153,7 +161,6 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
     if (!user || !latestVersion || !agreement) return;
     setSubmitting(true);
     try {
-      // insert new version
       const newVersionNum = latestVersion.version_num + 1;
       const { data: newV, error: vErr } = await supabase.from("agreement_versions").insert([{
         agreement_id: agreementId,
@@ -164,7 +171,6 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
       }]).select("id").single();
       if (vErr) throw vErr;
 
-      // insert acceptance as modified
       const { data: acc, error: aErr } = await supabase.from("agreement_acceptances").insert({
         agreement_version_id: newV.id,
         agreement_id: agreementId,
@@ -175,7 +181,6 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
       }).select("id").single();
       if (aErr) throw aErr;
 
-      // Centralized alert generation with dedupe
       if (acc) {
         await createAlertIfNeeded({
           group_id: groupId,
@@ -199,8 +204,10 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
   };
 
   if (loading) return <p className="text-sm text-muted-foreground">Loading…</p>;
-  if (!agreement || !latestVersion) return <p className="text-sm text-muted-foreground">Agreement not found.</p>;
+  if (!agreement || allVersions.length === 0) return <p className="text-sm text-muted-foreground">Agreement not found.</p>;
 
+  const latestVersion = allVersions[0];
+  const olderVersions = allVersions.slice(1);
   const fields = latestVersion.fields as VersionFields;
   const hasAcceptance = acceptances.some(a => a.agreement_version_id === latestVersion.id && a.status === "accepted");
 
@@ -213,6 +220,9 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
     { label: "Support Needed", key: "support_needed" },
     { label: "Renegotiation", key: "renegotiation_trigger" },
   ];
+
+  // Only show fields that have values
+  const activeFields = fieldEntries.filter(({ key }) => fields[key]);
 
   return (
     <Card>
@@ -227,15 +237,51 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Fields display */}
-        <div className="space-y-2">
-          {fieldEntries.map(({ label, key }) => (
-            <div key={key}>
-              <p className="text-xs font-medium text-muted-foreground">{label}</p>
-              <p className="text-sm">{fields[key] || "—"}</p>
-            </div>
-          ))}
+        {/* Current Version */}
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-2">Current Version</p>
+          <div className="space-y-2">
+            {activeFields.length > 0 ? activeFields.map(({ label, key }) => (
+              <div key={key}>
+                <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                <p className="text-sm whitespace-pre-wrap">{fields[key]}</p>
+              </div>
+            )) : (
+              <p className="text-sm text-muted-foreground">No content in this version.</p>
+            )}
+          </div>
         </div>
+
+        {/* Version History */}
+        {olderVersions.length > 0 && (
+          <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
+            <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground border-t pt-3 w-full">
+              <History className="h-3 w-3" />
+              <ChevronDown className={`h-3 w-3 transition-transform ${historyOpen ? "rotate-180" : ""}`} />
+              Version History ({olderVersions.length} older)
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 space-y-3">
+              {olderVersions.map(v => {
+                const vFields = v.fields as VersionFields;
+                const vActiveFields = fieldEntries.filter(({ key }) => vFields[key]);
+                return (
+                  <div key={v.id} className="rounded-md border p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium">v{v.version_num}</span>
+                      <span className="text-xs text-muted-foreground">{new Date(v.created_at).toLocaleDateString()}</span>
+                    </div>
+                    {vActiveFields.map(({ label, key }) => (
+                      <div key={key}>
+                        <p className="text-xs text-muted-foreground">{label}</p>
+                        <p className="text-xs whitespace-pre-wrap">{vFields[key]}</p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
         {/* Acceptance history */}
         {acceptances.length > 0 && (
@@ -290,7 +336,7 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
         {!isSubjectPerson && !proposing && (
           <div className="border-t pt-3">
             <Button size="sm" variant="outline" onClick={() => {
-              setProposeBody((fields as any)?.body || "");
+              setProposeBody(fields.body || "");
               setProposing(true);
             }}>
               <Pencil className="mr-1 h-4 w-4" /> Propose Update
@@ -344,7 +390,7 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
             {fieldEntries.map(({ label, key }) => (
               <div key={key} className="space-y-1">
                 <Label className="text-xs">{label}</Label>
-                {key === "i_will_statement" || key === "support_needed" ? (
+                {key === "i_will_statement" || key === "support_needed" || key === "body" ? (
                   <Textarea
                     value={(modFields[key] as string) || ""}
                     onChange={e => setModFields(f => ({ ...f, [key]: e.target.value }))}
