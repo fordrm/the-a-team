@@ -66,8 +66,9 @@ export default function InterventionsList({ groupId, personId, onCreateNew, onVi
   if (!personId) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-sm text-muted-foreground">
-          Select a supported person to view interventions.
+        <CardContent className="py-8 text-center">
+          <p className="font-medium text-sm">Choose a supported person</p>
+          <p className="text-sm text-muted-foreground mt-1">Select who you're coordinating for to view their interventions.</p>
         </CardContent>
       </Card>
     );

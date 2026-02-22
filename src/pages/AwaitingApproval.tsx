@@ -71,10 +71,11 @@ export default function AwaitingApproval() {
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
             <Clock className="h-6 w-6 text-muted-foreground" />
           </div>
-          <CardTitle className="text-xl">Awaiting Coordinator Link</CardTitle>
+           <CardTitle className="text-xl">Almost there</CardTitle>
           <CardDescription>
-            Your account is set up. A coordinator needs to link you to a group or invite you as a supported person. This page checks automatically every few seconds.
+            Your account is verified. Your care organizer still needs to link you to your support team. This page will update automatically.
           </CardDescription>
+          <p className="text-xs text-muted-foreground mt-2">If this doesn't update within a minute, sign out and sign back in.</p>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-3">
           <Button variant="outline" size="sm" onClick={checkApproval} disabled={checking}>

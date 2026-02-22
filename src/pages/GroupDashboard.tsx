@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle, Activity, Bell, Pencil, Trash2, Mail } from "lucide-react";
+import { getRoleLabel } from "@/lib/roleLabels";
 import Timeline from "@/components/timeline/Timeline";
 import AddNote from "@/components/timeline/AddNote";
 import AgreementsList from "@/components/agreements/AgreementsList";
@@ -282,8 +283,8 @@ export default function GroupDashboard() {
                         <Select value={inviteRole} onValueChange={setInviteRole}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent className="bg-background z-50">
-                            <SelectItem value="coordinator">Coordinator</SelectItem>
-                            <SelectItem value="supporter">Supporter</SelectItem>
+                            <SelectItem value="coordinator">Care Organizer</SelectItem>
+                            <SelectItem value="supporter">Support Team</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -298,8 +299,8 @@ export default function GroupDashboard() {
                 ) : (
                   <ul className="space-y-2">
                     {members.map(m => {
-                      const displayName = m.display_name || `Member (${m.user_id.slice(-6)})`;
                       const isSelf = m.user_id === user?.id;
+                      const displayName = m.display_name || (isSelf ? "You" : `Team member`);
                       const canEdit = isSelf || (isCoordinator && !m.display_name);
                       return (
                         <li key={m.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
@@ -316,7 +317,7 @@ export default function GroupDashboard() {
                               </button>
                             )}
                           </div>
-                          <span className="rounded bg-accent px-2 py-0.5 text-xs text-accent-foreground">{m.role}</span>
+                          <span className="rounded bg-accent px-2 py-0.5 text-xs text-accent-foreground">{getRoleLabel(m.role)}</span>
                         </li>
                       );
                     })}
@@ -348,7 +349,7 @@ export default function GroupDashboard() {
                 }} className="space-y-4">
                   <div className="space-y-2">
                     <Label>Display Name</Label>
-                    <Input value={editNameValue} onChange={e => setEditNameValue(e.target.value)} placeholder="Enter a display name" />
+                    <Input value={editNameValue} onChange={e => setEditNameValue(e.target.value)} placeholder="Set your display name" />
                   </div>
                   <div className="flex gap-2 justify-end">
                     <Button type="button" variant="outline" onClick={() => setEditNameOpen(false)}>Cancel</Button>
@@ -383,7 +384,10 @@ export default function GroupDashboard() {
               </CardHeader>
               <CardContent>
                 {persons.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No supported persons yet.</p>
+                  <div className="py-4 text-center">
+                    <p className="text-sm font-medium">No supported persons yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">Add a supported person first to begin coordinating care.</p>
+                  </div>
                 ) : (
                   <ul className="space-y-2">
                     {persons.map(p => (
