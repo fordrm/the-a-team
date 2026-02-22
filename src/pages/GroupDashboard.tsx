@@ -33,6 +33,7 @@ interface MemberRow { id: string; user_id: string; role: string; display_name: s
 interface PersonRow { id: string; label: string; is_primary: boolean; user_id: string | null; }
 
 type AgreementView = { type: "list" } | { type: "create" } | { type: "detail"; agreementId: string };
+const isGroupMemberCheck = (members: MemberRow[], userId: string | undefined) => members.some(m => m.user_id === userId);
 type TimelineView = { type: "list" } | { type: "add" };
 type ContradictionView = { type: "list" } | { type: "create" } | { type: "detail"; id: string };
 type InterventionView = { type: "list" } | { type: "create" } | { type: "detail"; id: string };
@@ -500,6 +501,7 @@ export default function GroupDashboard() {
               <AgreementsList
                 groupId={groupId!}
                 personId={activePersonId}
+                isGroupMember={isGroupMemberCheck(members, user?.id)}
                 onCreateNew={() => setAgreementView({ type: "create" })}
                 onViewAgreement={(id) => setAgreementView({ type: "detail", agreementId: id })}
               />
@@ -509,7 +511,9 @@ export default function GroupDashboard() {
                 groupId={groupId!}
                 personId={activePersonId}
                 onBack={() => setAgreementView({ type: "list" })}
-                onCreated={() => setAgreementView({ type: "list" })}
+                onCreated={(id) => {
+                  setAgreementView({ type: "detail", agreementId: id });
+                }}
               />
             )}
             {agreementView.type === "detail" && (
@@ -529,6 +533,7 @@ export default function GroupDashboard() {
                 groupId={groupId!}
                 personId={activePersonId}
                 members={members}
+                isGroupMember={isGroupMemberCheck(members, user?.id)}
                 onAddNote={() => setTimelineView({ type: "add" })}
               />
             )}

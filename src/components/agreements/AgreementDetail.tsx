@@ -13,6 +13,7 @@ import { ArrowLeft, Check, Pencil } from "lucide-react";
 
 interface VersionFields {
   title?: string;
+  body?: string;
   i_will_statement?: string;
   metric_definition?: string;
   cadence_or_due_date?: string;
@@ -38,11 +39,15 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
   const [isSubjectPerson, setIsSubjectPerson] = useState(false);
   const [isCoordinator, setIsCoordinator] = useState(false);
 
-  // modify mode
+  // modify mode (supported person)
   const [modifying, setModifying] = useState(false);
   const [modFields, setModFields] = useState<VersionFields>({});
   const [modMessage, setModMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // propose update mode (coordinator/supporter)
+  const [proposing, setProposing] = useState(false);
+  const [proposeBody, setProposeBody] = useState("");
 
   const fetchAll = async () => {
     setLoading(true);
@@ -200,6 +205,7 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
   const hasAcceptance = acceptances.some(a => a.agreement_version_id === latestVersion.id && a.status === "accepted");
 
   const fieldEntries: { label: string; key: keyof VersionFields }[] = [
+    { label: "Terms", key: "body" },
     { label: "I will…", key: "i_will_statement" },
     { label: "Metric", key: "metric_definition" },
     { label: "Cadence / Due", key: "cadence_or_due_date" },
@@ -278,6 +284,57 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
               Confirm as Current Version
             </Button>
           </div>
+        )}
+
+        {/* Coordinator/Supporter: Propose Update */}
+        {!isSubjectPerson && !proposing && (
+          <div className="border-t pt-3">
+            <Button size="sm" variant="outline" onClick={() => {
+              setProposeBody((fields as any)?.body || "");
+              setProposing(true);
+            }}>
+              <Pencil className="mr-1 h-4 w-4" /> Propose Update
+            </Button>
+          </div>
+        )}
+
+        {/* Propose Update form */}
+        {proposing && (
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            if (!user) return;
+            setSubmitting(true);
+            try {
+              const { error } = await supabase.rpc("propose_agreement_version", {
+                p_agreement_id: agreementId,
+                p_group_id: groupId,
+                p_body: proposeBody,
+              });
+              if (error) throw error;
+              toast({ title: "Update proposed" });
+              setProposing(false);
+              fetchAll();
+            } catch (err: any) {
+              toast({ title: "Error", description: err.message, variant: "destructive" });
+            } finally { setSubmitting(false); }
+          }} className="space-y-3 border-t pt-3">
+            <p className="text-sm font-medium">Propose updated terms</p>
+            <div className="space-y-1">
+              <Label className="text-xs">Updated Terms</Label>
+              <Textarea
+                required
+                value={proposeBody}
+                onChange={e => setProposeBody(e.target.value)}
+                rows={6}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" size="sm" disabled={submitting}>
+                {submitting ? "Submitting…" : "Submit Update"}
+              </Button>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setProposing(false)}>Cancel</Button>
+            </div>
+          </form>
         )}
 
         {/* Modify form */}

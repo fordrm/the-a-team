@@ -16,6 +16,7 @@ interface AgreementRow {
 
 interface VersionFields {
   title?: string;
+  body?: string;
   i_will_statement?: string;
   metric_definition?: string;
   cadence_or_due_date?: string;
@@ -38,9 +39,10 @@ interface Props {
   personId: string | null;
   onCreateNew: () => void;
   onViewAgreement: (agreementId: string) => void;
+  isGroupMember?: boolean;
 }
 
-export default function AgreementsList({ groupId, personId, onCreateNew, onViewAgreement }: Props) {
+export default function AgreementsList({ groupId, personId, onCreateNew, onViewAgreement, isGroupMember = true }: Props) {
   const [agreements, setAgreements] = useState<AgreementRow[]>([]);
   const [versions, setVersions] = useState<Record<string, VersionRow>>({});
   const [loading, setLoading] = useState(true);
@@ -99,9 +101,11 @@ export default function AgreementsList({ groupId, personId, onCreateNew, onViewA
         <CardTitle className="flex items-center gap-2 text-lg">
           <FileText className="h-5 w-5 text-primary" /> Agreements
         </CardTitle>
-        <Button size="sm" variant="outline" onClick={onCreateNew}>
-          <Plus className="mr-1 h-4 w-4" /> New Agreement
-        </Button>
+        {isGroupMember && (
+          <Button size="sm" variant="outline" onClick={onCreateNew} disabled={!personId}>
+            <Plus className="mr-1 h-4 w-4" /> New Agreement
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {agreements.length === 0 ? (
