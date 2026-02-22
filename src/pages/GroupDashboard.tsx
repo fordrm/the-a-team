@@ -41,6 +41,7 @@ type InterventionView = { type: "list" } | { type: "create" } | { type: "detail"
 type AlertView = { type: "list" } | { type: "detail"; id: string };
 
 const PERSON_KEY = (gid: string) => `activePerson_${gid}`;
+const TIMELINE_SEEN_KEY = (gid: string, pid: string) => `timelineSeen_${gid}_${pid}`;
 
 export default function GroupDashboard() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -63,6 +64,7 @@ export default function GroupDashboard() {
   const [interventionKey, setInterventionKey] = useState(0);
   const [alertView, setAlertView] = useState<AlertView>({ type: "list" });
   const [alertKey, setAlertKey] = useState(0);
+  const [timelineUnread, setTimelineUnread] = useState(0);
 
   // invite form
   const [inviteEmail, setInviteEmail] = useState("");
@@ -161,6 +163,41 @@ export default function GroupDashboard() {
   };
 
   useEffect(() => { fetchData(); }, [groupId]);
+
+  // Count unread timeline items for badge
+  useEffect(() => {
+    if (!groupId || !activePersonId) {
+      setTimelineUnread(0);
+      return;
+    }
+    const seenKey = TIMELINE_SEEN_KEY(groupId, activePersonId);
+    const lastSeen = sessionStorage.getItem(seenKey);
+    if (!lastSeen) {
+      setTimelineUnread(0);
+      return;
+    }
+    const countNew = async () => {
+      const { count, error } = await supabase
+        .from("contact_notes")
+        .select("id", { count: "exact", head: true })
+        .eq("group_id", groupId)
+        .eq("subject_person_id", activePersonId)
+        .gt("created_at", lastSeen);
+      if (!error && count !== null) {
+        setTimelineUnread(count);
+      }
+    };
+    countNew();
+  }, [groupId, activePersonId, timelineKey]);
+
+  // Mark timeline as seen when user views it
+  useEffect(() => {
+    if (activeTab === "timeline" && groupId && activePersonId) {
+      const seenKey = TIMELINE_SEEN_KEY(groupId, activePersonId);
+      sessionStorage.setItem(seenKey, new Date().toISOString());
+      setTimelineUnread(0);
+    }
+  }, [activeTab, groupId, activePersonId]);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -332,7 +369,7 @@ export default function GroupDashboard() {
                 {!isSubjectPerson && <SelectItem value="members"><span className="flex items-center gap-2"><Users className="h-4 w-4" /> Members</span></SelectItem>}
                 {!isSubjectPerson && <SelectItem value="persons"><span className="flex items-center gap-2"><Heart className="h-4 w-4" /> Persons</span></SelectItem>}
                 <SelectItem value="agreements"><span className="flex items-center gap-2"><Clock className="h-4 w-4" /> Agreements</span></SelectItem>
-                <SelectItem value="timeline"><span className="flex items-center gap-2"><Clock className="h-4 w-4" /> {isSubjectPerson ? "Shared Notes" : "Timeline"}</span></SelectItem>
+                <SelectItem value="timeline"><span className="flex items-center gap-2"><Clock className="h-4 w-4" /> {isSubjectPerson ? "Shared Notes" : "Timeline"}{timelineUnread > 0 && <Badge variant="destructive" className="ml-1 h-4 min-w-4 px-1 text-[10px]">{timelineUnread > 99 ? "99+" : timelineUnread}</Badge>}</span></SelectItem>
                 {!isSubjectPerson && <SelectItem value="contradictions"><span className="flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Conflicts</span></SelectItem>}
                 {!isSubjectPerson && <SelectItem value="interventions"><span className="flex items-center gap-2"><Activity className="h-4 w-4" /> Interventions</span></SelectItem>}
                 {!isSubjectPerson && <SelectItem value="alerts"><span className="flex items-center gap-2"><Bell className="h-4 w-4" /> Alerts</span></SelectItem>}
@@ -344,7 +381,7 @@ export default function GroupDashboard() {
             {!isSubjectPerson && <TabsTrigger value="members" className="flex-1">Members</TabsTrigger>}
             {!isSubjectPerson && <TabsTrigger value="persons" className="flex-1">Persons</TabsTrigger>}
             <TabsTrigger value="agreements" className="flex-1">Agreements</TabsTrigger>
-            <TabsTrigger value="timeline" className="flex-1">{isSubjectPerson ? "Shared Notes" : "Timeline"}</TabsTrigger>
+            <TabsTrigger value="timeline" className="flex-1"><span className="flex items-center gap-1">{isSubjectPerson ? "Shared Notes" : "Timeline"}{timelineUnread > 0 && <Badge variant="destructive" className="ml-1 h-4 min-w-4 px-1 text-[10px]">{timelineUnread > 99 ? "99+" : timelineUnread}</Badge>}</span></TabsTrigger>
             {!isSubjectPerson && <TabsTrigger value="contradictions" className="flex-1">Conflicts</TabsTrigger>}
             {!isSubjectPerson && <TabsTrigger value="interventions" className="flex-1">Interventions</TabsTrigger>}
             {!isSubjectPerson && <TabsTrigger value="alerts" className="flex-1">Alerts</TabsTrigger>}
@@ -627,6 +664,11 @@ export default function GroupDashboard() {
                   members={members}
                   isGroupMember={isMember}
                   onAddNote={() => setTimelineView({ type: "add" })}
+                  lastSeenAt={
+                    groupId && activePersonId
+                      ? sessionStorage.getItem(TIMELINE_SEEN_KEY(groupId, activePersonId))
+                      : null
+                  }
                 />
               </div>
             )}
