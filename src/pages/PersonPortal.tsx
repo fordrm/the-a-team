@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Info, LogOut, Pencil, HelpCircle, CheckCircle2, Clock, Bell } from "lucide-react";
+import { PERSON_ASSESSMENT_OPTIONS, type PersonAssessment } from "@/types/agreements";
 import { useToast } from "@/hooks/use-toast";
 import AgreementDetail from "@/components/agreements/AgreementDetail";
 
@@ -224,6 +225,69 @@ export default function PersonPortal() {
     }
   };
 
+  async function requestRevisit(agreementId: string) {
+    // Supported persons can't update agreements directly via RLS,
+    // so we use a self_assessed acceptance to signal review request
+    if (!user || !personInfo) return;
+    try {
+      // Find the latest version for this agreement
+      const { data: latestVersion } = await supabase
+        .from("agreement_versions")
+        .select("id")
+        .eq("agreement_id", agreementId)
+        .order("version_num", { ascending: false })
+        .limit(1)
+        .single();
+      if (!latestVersion) return;
+
+      await supabase.from("agreement_acceptances").insert({
+        agreement_id: agreementId,
+        agreement_version_id: latestVersion.id,
+        group_id: personInfo.group_id,
+        person_user_id: user.id,
+        status: "self_assessed",
+        message: "review_requested",
+      });
+      toast({
+        title: "Review requested",
+        description: "Your coordinator will be notified to review this agreement.",
+      });
+      refreshAgreements();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  }
+
+  async function submitAssessment(agreementId: string, assessment: PersonAssessment) {
+    if (!user || !personInfo) return;
+    try {
+      const { data: latestVersion } = await supabase
+        .from("agreement_versions")
+        .select("id")
+        .eq("agreement_id", agreementId)
+        .order("version_num", { ascending: false })
+        .limit(1)
+        .single();
+      if (!latestVersion) return;
+
+      await supabase.from("agreement_acceptances").insert({
+        agreement_id: agreementId,
+        agreement_version_id: latestVersion.id,
+        group_id: personInfo.group_id,
+        person_user_id: user.id,
+        status: "self_assessed",
+        message: assessment,
+      });
+      toast({
+        title: "Assessment submitted",
+        description: "Thank you — your coordinator will see this during their review.",
+      });
+      refreshAgreements();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  }
+
   if (loading || checking) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -384,6 +448,36 @@ export default function PersonPortal() {
                           {version && ` · v${version.version_num}`}
                           {needsResponse && " · Tap to review"}
                         </p>
+                        {/* Revisit button for active agreements */}
+                        {a.status === "accepted" && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); requestRevisit(a.id); }}
+                            className="text-xs text-muted-foreground hover:text-foreground underline mt-1"
+                          >
+                            I'd like to revisit this
+                          </button>
+                        )}
+                        {/* Self-assessment for review_needed */}
+                        {a.status === "review_needed" && (
+                          <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
+                            <p className="text-xs text-muted-foreground font-medium">How do you feel this agreement went?</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {PERSON_ASSESSMENT_OPTIONS.map(opt => (
+                                <Button
+                                  key={opt.value}
+                                  variant="outline"
+                                  className="h-10 justify-start gap-2 text-xs"
+                                  onClick={() => submitAssessment(a.id, opt.value)}
+                                >
+                                  <span className="text-base">{opt.emoji}</span>
+                                  <span>{opt.label}</span>
+                                </Button>
+                              ))}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">Your response helps your coordinator decide what comes next.</p>
+                          </div>
+                        )}
                       </li>
                     );
                   })}

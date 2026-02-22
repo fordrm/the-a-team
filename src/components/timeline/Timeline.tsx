@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Clock, Plus, ChevronDown, ChevronRight, Eye, EyeOff, Shield, Activity, Pin, FileText, Check, Pencil, X, XCircle, Paperclip } from "lucide-react";
+import { Clock, Plus, ChevronDown, ChevronRight, Eye, EyeOff, Shield, Activity, Pin, FileText, Check, Pencil, X, XCircle, Paperclip, AlertTriangle, User } from "lucide-react";
 import { INDICATOR_LABEL_MAP, ALL_INDICATORS, getIndicatorBadgeColor } from "@/lib/indicators";
 import { formatCadenceDisplay, formatDurationDisplay, computeFieldDiffs } from "@/types/agreements";
 import type { VersionFields, FieldDiff } from "@/types/agreements";
@@ -126,6 +126,11 @@ const AGREEMENT_STATUS_CONFIG: Record<string, { icon: React.ReactNode; label: st
   modified: { icon: <Pencil className="h-3 w-3 text-amber-500" />, label: "Modification proposed" },
   declined: { icon: <X className="h-3 w-3 text-red-500" />, label: "Agreement declined" },
   withdrawn: { icon: <XCircle className="h-3 w-3 text-gray-500" />, label: "Agreement withdrawn" },
+  completed: { icon: <Check className="h-3 w-3 text-green-600" />, label: "Agreement completed" },
+  incomplete: { icon: <AlertTriangle className="h-3 w-3 text-amber-500" />, label: "Agreement incomplete" },
+  lapsed: { icon: <Clock className="h-3 w-3 text-gray-400" />, label: "Agreement lapsed" },
+  review_needed: { icon: <Clock className="h-3 w-3 text-amber-500" />, label: "Review due" },
+  self_assessed: { icon: <User className="h-3 w-3 text-blue-500" />, label: "Self-assessment" },
 };
 
 export default function Timeline({ groupId, personId, members, onAddNote, isGroupMember = true, lastSeenAt }: Props) {
@@ -547,7 +552,12 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                   const c = item.data as CollapsedAgreement;
                   const terminalConfig = AGREEMENT_STATUS_CONFIG[c.terminal_status] || AGREEMENT_STATUS_CONFIG.created;
 
-                  const summaryLabel = c.terminal_status === "accepted" && c.events.length > 1
+                  const summaryLabel =
+                    c.terminal_status === "completed" ? "Agreement completed" :
+                    c.terminal_status === "incomplete" ? "Agreement incomplete" :
+                    c.terminal_status === "lapsed" ? "Agreement lapsed" :
+                    c.terminal_status === "review_needed" ? "Review due" :
+                    c.terminal_status === "accepted" && c.events.length > 1
                     ? "Agreement finalized"
                     : c.terminal_status === "accepted"
                     ? "Agreement accepted"
@@ -557,6 +567,8 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                     ? "Agreement withdrawn"
                     : c.terminal_status === "modified"
                     ? "Awaiting response"
+                    : c.terminal_status === "self_assessed"
+                    ? "Self-assessment submitted"
                     : "Agreement proposed";
 
                   const participants = [

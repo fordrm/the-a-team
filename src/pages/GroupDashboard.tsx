@@ -20,6 +20,7 @@ import AddNote from "@/components/timeline/AddNote";
 import AgreementsList from "@/components/agreements/AgreementsList";
 import CreateAgreement from "@/components/agreements/CreateAgreement";
 import AgreementDetail from "@/components/agreements/AgreementDetail";
+import AgreementReview from "@/components/agreements/AgreementReview";
 import ContradictionsList from "@/components/contradictions/ContradictionsList";
 import CreateContradiction from "@/components/contradictions/CreateContradiction";
 import ContradictionDetail from "@/components/contradictions/ContradictionDetail";
@@ -34,7 +35,7 @@ interface GroupRow { id: string; name: string; }
 interface MemberRow { id: string; user_id: string; role: string; display_name: string | null; is_active: boolean; }
 interface PersonRow { id: string; label: string; is_primary: boolean; user_id: string | null; }
 
-type AgreementView = { type: "list" } | { type: "create" } | { type: "detail"; agreementId: string };
+type AgreementView = { type: "list" } | { type: "create"; prefillFields?: import("@/types/agreements").VersionFields | null } | { type: "detail"; agreementId: string } | { type: "review"; agreementId: string };
 type TimelineView = { type: "list" } | { type: "add" };
 type ContradictionView = { type: "list" } | { type: "create" } | { type: "detail"; id: string };
 type InterventionView = { type: "list" } | { type: "create" } | { type: "detail"; id: string };
@@ -639,9 +640,20 @@ export default function GroupDashboard() {
               <CreateAgreement
                 groupId={groupId!}
                 personId={activePersonId}
+                prefillFields={agreementView.prefillFields || null}
                 onBack={() => setAgreementView({ type: "list" })}
                 onCreated={(id) => {
                   setAgreementView({ type: "detail", agreementId: id });
+                }}
+              />
+            )}
+            {agreementView.type === "review" && (
+              <AgreementReview
+                agreementId={agreementView.agreementId}
+                groupId={groupId!}
+                onBack={() => setAgreementView({ type: "list" })}
+                onRenew={(fields) => {
+                  setAgreementView({ type: "create", prefillFields: fields });
                 }}
               />
             )}
@@ -650,6 +662,9 @@ export default function GroupDashboard() {
                 agreementId={agreementView.agreementId}
                 groupId={groupId!}
                 onBack={() => setAgreementView({ type: "list" })}
+                onStartReview={(id) => {
+                  setAgreementView({ type: "review", agreementId: id });
+                }}
               />
             )}
           </TabsContent>

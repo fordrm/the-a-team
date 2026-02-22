@@ -21,10 +21,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, ChevronDown, Settings2 } from "lucide-react";
 import type { CadenceValue, DurationValue, VersionFields } from "@/types/agreements";
+import { RefreshCw } from "lucide-react";
 
 interface Props {
   groupId: string;
   personId: string;
+  prefillFields?: VersionFields | null;
   onBack: () => void;
   onCreated: (agreementId: string) => void;
 }
@@ -71,25 +73,29 @@ function formatCadenceSummary(c: CadenceValue): string {
   return s;
 }
 
-export default function CreateAgreement({ groupId, personId, onBack, onCreated }: Props) {
+export default function CreateAgreement({ groupId, personId, prefillFields, onBack, onCreated }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 
-  // Core fields (always visible)
-  const [title, setTitle] = useState("");
-  const [iWill, setIWill] = useState("");
-  const [cadence, setCadence] = useState<CadenceValue>({ frequency: "daily" });
-  const [duration, setDuration] = useState<DurationValue>({ type: "fixed", days: 30 });
+  // Core fields (always visible) — initialized from prefill if renewing
+  const [title, setTitle] = useState(prefillFields?.title || "");
+  const [iWill, setIWill] = useState(prefillFields?.i_will_statement || "");
+  const [cadence, setCadence] = useState<CadenceValue>(
+    (prefillFields?.cadence as CadenceValue) || { frequency: "daily" }
+  );
+  const [duration, setDuration] = useState<DurationValue>(
+    (prefillFields?.duration as DurationValue) || { type: "fixed", days: 30 }
+  );
 
   // Expanded fields (hidden by default)
   const [expanded, setExpanded] = useState(false);
-  const [checkInMethod, setCheckInMethod] = useState("timeline_note");
+  const [checkInMethod, setCheckInMethod] = useState(prefillFields?.check_in_method || "timeline_note");
   const [checkInOther, setCheckInOther] = useState("");
-  const [metric, setMetric] = useState("");
-  const [renegotiationTrigger, setRenegotiationTrigger] = useState("");
-  const [body, setBody] = useState("");
-  const [supportNeeded, setSupportNeeded] = useState("");
+  const [metric, setMetric] = useState(prefillFields?.metric_definition || "");
+  const [renegotiationTrigger, setRenegotiationTrigger] = useState(prefillFields?.renegotiation_trigger || "");
+  const [body, setBody] = useState(prefillFields?.body || "");
+  const [supportNeeded, setSupportNeeded] = useState(prefillFields?.support_needed || "");
 
   // Completeness (only shown when expanded)
   const filledOptional = [metric, renegotiationTrigger, body, supportNeeded].filter(s => s.trim()).length;
@@ -118,6 +124,7 @@ export default function CreateAgreement({ groupId, personId, onBack, onCreated }
         check_in_method: checkInMethod === "other" ? checkInOther : checkInMethod,
         support_needed: supportNeeded || undefined,
         renegotiation_trigger: renegotiationTrigger || undefined,
+        renewed_from: prefillFields?.renewed_from || undefined,
       };
 
       const { data, error } = await supabase.rpc("create_agreement_with_version", {
@@ -128,8 +135,18 @@ export default function CreateAgreement({ groupId, personId, onBack, onCreated }
       });
 
       if (error) throw error;
+      const newId = data as string;
+
+      // If renewing, update the original agreement's renewed_as
+      if (prefillFields?.renewed_from && newId) {
+        await supabase
+          .from("agreements")
+          .update({ renewed_as: newId })
+          .eq("id", prefillFields.renewed_from);
+      }
+
       toast({ title: "Agreement created" });
-      onCreated(data as string);
+      onCreated(newId);
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
@@ -143,10 +160,16 @@ export default function CreateAgreement({ groupId, personId, onBack, onCreated }
         <Button variant="ghost" size="sm" className="w-fit" onClick={onBack}>
           <ArrowLeft className="mr-1 h-4 w-4" /> Back
         </Button>
-        <CardTitle className="text-lg">New Agreement</CardTitle>
+        <CardTitle className="text-lg">{prefillFields?.renewed_from ? "Renew Agreement" : "New Agreement"}</CardTitle>
       </CardHeader>
 
       <CardContent>
+        {prefillFields?.renewed_from && (
+          <div className="flex items-center gap-2 rounded-md bg-muted/50 border px-3 py-2 mb-4 text-sm text-muted-foreground">
+            <RefreshCw className="h-4 w-4 shrink-0" />
+            Renewing a previous agreement. Adjust any fields as needed.
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
 
           {/* === COMPACT SECTION: Always visible === */}
