@@ -4,14 +4,13 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { signOutAndReset } from "@/lib/signOut";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Info, LogOut, Pencil } from "lucide-react";
+import { Info, LogOut, Pencil, HelpCircle, CheckCircle2, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface PersonInfo {
@@ -55,6 +54,9 @@ export default function PersonPortal() {
   const [editLabelOpen, setEditLabelOpen] = useState(false);
   const [editLabelValue, setEditLabelValue] = useState("");
   const [savingLabel, setSavingLabel] = useState(false);
+
+  // Explainer modal
+  const [explainerOpen, setExplainerOpen] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -157,9 +159,12 @@ export default function PersonPortal() {
       <div className="flex min-h-screen items-center justify-center px-4">
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
-            <CardTitle>No Group Access</CardTitle>
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <Clock className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <CardTitle>Awaiting link from your care organizer</CardTitle>
             <CardDescription>
-              You haven't been linked to any support group yet. Ask your coordinator to invite you.
+              Your account is verified but you haven't been linked to a support team yet. Your care organizer will connect you shortly.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
@@ -175,6 +180,7 @@ export default function PersonPortal() {
   return (
     <div className="min-h-screen px-4 py-8">
       <div className="mx-auto max-w-2xl space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div>
@@ -197,6 +203,12 @@ export default function PersonPortal() {
           </Button>
         </div>
 
+        {/* Status Banner */}
+        <div className="flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
+          <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+          <span className="text-muted-foreground">Status: <span className="text-foreground font-medium">Connected to your support team</span></span>
+        </div>
+
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
@@ -204,73 +216,98 @@ export default function PersonPortal() {
           </AlertDescription>
         </Alert>
 
-        <Tabs defaultValue="notes">
-          <TabsList className="w-full">
-            <TabsTrigger value="notes" className="flex-1">Shared Notes</TabsTrigger>
-            <TabsTrigger value="agreements" className="flex-1">My Agreements</TabsTrigger>
-          </TabsList>
+        {/* Section 1: Shared Notes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Shared Notes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {notes.length === 0 ? (
+              <div className="py-4 text-center">
+                <p className="text-sm font-medium">Nothing shared yet</p>
+                <p className="text-sm text-muted-foreground mt-1">Your support team hasn't shared any notes with you yet. When they do, they'll appear here.</p>
+              </div>
+            ) : (
+              <ul className="space-y-3">
+                {notes.map((n) => (
+                  <li key={n.id} className="rounded-md border px-3 py-2">
+                    <p className="text-sm">{n.body}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {new Date(n.occurred_at).toLocaleDateString()}
+                      {n.channel && ` · ${n.channel}`}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
 
-          <TabsContent value="notes">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Shared Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {notes.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No shared notes yet.</p>
-                ) : (
-                  <ul className="space-y-3">
-                    {notes.map((n) => (
-                      <li key={n.id} className="rounded-md border px-3 py-2">
-                        <p className="text-sm">{n.body}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {new Date(n.occurred_at).toLocaleDateString()}
-                          {n.channel && ` · ${n.channel}`}
+        {/* Section 2: My Agreements */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">My Agreements</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {agreements.length === 0 ? (
+              <div className="py-4 text-center">
+                <p className="text-sm font-medium">No agreements yet</p>
+                <p className="text-sm text-muted-foreground mt-1">Agreements shared with you will appear here for review and acceptance.</p>
+              </div>
+            ) : (
+              <ul className="space-y-3">
+                {agreements.map((a) => {
+                  const version = a.current_version_id ? versions[a.current_version_id] : null;
+                  const fields = version?.fields as Record<string, string> | undefined;
+                  return (
+                    <li key={a.id} className="rounded-md border px-3 py-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">
+                          {fields?.title || fields?.summary || `Agreement`}
                         </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                        <Badge variant={a.status === "active" ? "default" : "secondary"}>
+                          {a.status}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Created {new Date(a.created_at).toLocaleDateString()}
+                        {version && ` · v${version.version_num}`}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
 
-          <TabsContent value="agreements">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">My Agreements</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {agreements.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No agreements yet.</p>
-                ) : (
-                  <ul className="space-y-3">
-                    {agreements.map((a) => {
-                      const version = a.current_version_id ? versions[a.current_version_id] : null;
-                      const fields = version?.fields as Record<string, string> | undefined;
-                      return (
-                        <li key={a.id} className="rounded-md border px-3 py-2">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium">
-                              {fields?.title || fields?.summary || `Agreement`}
-                            </p>
-                            <Badge variant={a.status === "active" ? "default" : "secondary"}>
-                              {a.status}
-                            </Badge>
-                          </div>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Created {new Date(a.created_at).toLocaleDateString()}
-                            {version && ` · v${version.version_num}`}
-                          </p>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        {/* Why am I seeing this? */}
+        <div className="text-center">
+          <button
+            type="button"
+            onClick={() => setExplainerOpen(true)}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+            Why am I seeing this?
+          </button>
+        </div>
+
+        {/* Explainer Modal */}
+        <Dialog open={explainerOpen} onOpenChange={setExplainerOpen}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>About this portal</DialogTitle></DialogHeader>
+            <ul className="space-y-3 text-sm text-muted-foreground">
+              <li>You were invited by a support team coordinating care with you.</li>
+              <li>You only see items they explicitly share with you.</li>
+              <li>Some internal coordination notes are not visible here.</li>
+              <li>If something looks wrong, contact your care organizer.</li>
+            </ul>
+            <div className="flex justify-end mt-2">
+              <Button variant="outline" size="sm" onClick={() => setExplainerOpen(false)}>Got it</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Edit Label Dialog */}
         <Dialog open={editLabelOpen} onOpenChange={setEditLabelOpen}>
