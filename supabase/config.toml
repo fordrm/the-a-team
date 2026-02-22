@@ -2,3 +2,6 @@ project_id = "bitbhawgxvdpxffnqarv"
 
 [functions.invite-to-group]
 verify_jwt = false
+
+[functions.invite-supported-person]
+verify_jwt = false

@@ -71,14 +71,14 @@ export default function AwaitingApproval() {
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
             <Clock className="h-6 w-6 text-muted-foreground" />
           </div>
-          <CardTitle className="text-xl">Awaiting Access</CardTitle>
+          <CardTitle className="text-xl">Awaiting Coordinator Link</CardTitle>
           <CardDescription>
-            Your account is set up. A coordinator must add you to a group before you can proceed. This page will update automatically.
+            Your account is set up. A coordinator needs to link you to a group or invite you as a supported person. This page checks automatically every few seconds.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-3">
           <Button variant="outline" size="sm" onClick={checkApproval} disabled={checking}>
-            <RefreshCw className={`mr-1 h-4 w-4 ${checking ? "animate-spin" : ""}`} /> Refresh
+            <RefreshCw className={`mr-1 h-4 w-4 ${checking ? "animate-spin" : ""}`} /> Refresh Access
           </Button>
           <Button variant="ghost" size="sm" onClick={() => signOutAndReset()}>
             <LogOut className="mr-1 h-4 w-4" /> Sign Out

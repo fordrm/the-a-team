@@ -745,6 +745,10 @@ export type Database = {
         Args: { p_group_id: string; p_label: string; p_subject_user_id: string }
         Returns: string
       }
+      upsert_supported_person_link: {
+        Args: { p_group_id: string; p_person_id: string; p_user_id: string }
+        Returns: string
+      }
       whoami: { Args: never; Returns: string }
     }
     Enums: {
