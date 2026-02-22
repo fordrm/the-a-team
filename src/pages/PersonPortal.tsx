@@ -256,8 +256,8 @@ export default function PersonPortal() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-8">
-      <div className="mx-auto max-w-2xl space-y-6">
+    <div className="min-h-screen px-3 sm:px-6 py-4 sm:py-8">
+      <div className="mx-auto max-w-2xl space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -360,7 +360,7 @@ export default function PersonPortal() {
                       <li
                         key={a.id}
                         onClick={() => setSelectedAgreementId(a.id)}
-                        className={`rounded-md border px-3 py-2 cursor-pointer transition-colors hover:bg-muted/50 ${
+                        className={`rounded-lg border p-4 space-y-2 cursor-pointer transition-colors hover:bg-muted/50 active:bg-accent/50 ${
                           needsResponse ? "border-primary/40 bg-primary/5" : ""
                         }`}
                       >
