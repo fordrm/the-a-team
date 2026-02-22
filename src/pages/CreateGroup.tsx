@@ -18,14 +18,21 @@ export default function CreateGroup() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
     setSubmitting(true);
     try {
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData.user) {
+        toast({ title: "Please sign in again.", variant: "destructive" });
+        navigate("/auth", { replace: true });
+        return;
+      }
+      const currentUserId = userData.user.id;
+
       // Insert group
       const { data: group, error: groupErr } = await supabase
         .from("groups")
-        .insert({ name, created_by_user_id: user.id })
-        .select()
+        .insert({ name: name.trim(), created_by_user_id: currentUserId })
+        .select("id")
         .single();
       if (groupErr) throw groupErr;
 
@@ -34,7 +41,7 @@ export default function CreateGroup() {
         .from("group_memberships")
         .insert({
           group_id: group.id,
-          user_id: user.id,
+          user_id: currentUserId,
           role: "coordinator",
           is_active: true,
           capabilities: {},
@@ -43,6 +50,7 @@ export default function CreateGroup() {
 
       navigate(`/group/${group.id}`);
     } catch (err: any) {
+      console.error("Create group error:", err.message);
       toast({ title: "Error creating group", description: err.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
