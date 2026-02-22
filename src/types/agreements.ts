@@ -58,3 +58,59 @@ export function formatDurationDisplay(fields: VersionFields): string {
   }
   return "";
 }
+
+export interface FieldDiff {
+  label: string;
+  oldValue: string;
+  newValue: string;
+}
+
+export function computeFieldDiffs(
+  oldFields: VersionFields,
+  newFields: VersionFields
+): FieldDiff[] {
+  const diffs: FieldDiff[] = [];
+
+  if (oldFields.title !== newFields.title && oldFields.title && newFields.title) {
+    diffs.push({ label: "Title", oldValue: oldFields.title, newValue: newFields.title });
+  }
+
+  if (oldFields.i_will_statement !== newFields.i_will_statement && oldFields.i_will_statement && newFields.i_will_statement) {
+    diffs.push({ label: "Commitment", oldValue: oldFields.i_will_statement, newValue: newFields.i_will_statement });
+  }
+
+  if (oldFields.cadence && newFields.cadence) {
+    const oldCadence = formatCadenceDisplay(oldFields);
+    const newCadence = formatCadenceDisplay(newFields);
+    if (oldCadence !== newCadence) {
+      diffs.push({ label: "Schedule", oldValue: oldCadence, newValue: newCadence });
+    }
+  } else if (oldFields.cadence_or_due_date !== newFields.cadence_or_due_date && oldFields.cadence_or_due_date && newFields.cadence_or_due_date) {
+    diffs.push({ label: "Schedule", oldValue: oldFields.cadence_or_due_date, newValue: newFields.cadence_or_due_date });
+  }
+
+  if (oldFields.duration && newFields.duration) {
+    const oldDur = formatDurationDisplay(oldFields);
+    const newDur = formatDurationDisplay(newFields);
+    if (oldDur !== newDur) {
+      diffs.push({ label: "Duration", oldValue: oldDur, newValue: newDur });
+    }
+  }
+
+  if (oldFields.metric_definition !== newFields.metric_definition && oldFields.metric_definition && newFields.metric_definition) {
+    diffs.push({ label: "Metric", oldValue: oldFields.metric_definition, newValue: newFields.metric_definition });
+  }
+
+  if (oldFields.check_in_method !== newFields.check_in_method && oldFields.check_in_method && newFields.check_in_method) {
+    diffs.push({ label: "Check-in", oldValue: oldFields.check_in_method, newValue: newFields.check_in_method });
+  }
+
+  if (oldFields.body !== newFields.body && oldFields.body && newFields.body) {
+    const maxLen = 60;
+    const oldTrunc = oldFields.body.length > maxLen ? oldFields.body.slice(0, maxLen) + "…" : oldFields.body;
+    const newTrunc = newFields.body.length > maxLen ? newFields.body.slice(0, maxLen) + "…" : newFields.body;
+    diffs.push({ label: "Terms", oldValue: oldTrunc, newValue: newTrunc });
+  }
+
+  return diffs;
+}
