@@ -257,7 +257,12 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Current Version */}
+        {/* Response prompt for subject person */}
+        {isSubjectPerson && agreement.status === "proposed" && !hasAcceptance && (
+          <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-foreground">
+            This agreement is waiting for your response. You can accept it as-is, propose modifications, or decline.
+          </div>
+        )}
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-2">Current Version</p>
           <div className="space-y-2">

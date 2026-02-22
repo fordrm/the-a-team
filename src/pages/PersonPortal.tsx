@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Info, LogOut, Pencil, HelpCircle, CheckCircle2, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import AgreementDetail from "@/components/agreements/AgreementDetail";
 
 interface PersonInfo {
   id: string;
@@ -50,6 +51,7 @@ export default function PersonPortal() {
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [versions, setVersions] = useState<Record<string, AgreementVersion>>({});
   const [checking, setChecking] = useState(true);
+  const [selectedAgreementId, setSelectedAgreementId] = useState<string | null>(null);
 
   // Edit label
   const [editLabelOpen, setEditLabelOpen] = useState(false);
@@ -181,6 +183,47 @@ export default function PersonPortal() {
     }
   };
 
+  const refreshAgreements = async () => {
+    if (!personInfo) return;
+    const { data: agreementsData } = await supabase
+      .from("agreements")
+      .select("id, status, created_at, current_version_id")
+      .eq("group_id", personInfo.group_id)
+      .eq("subject_person_id", personInfo.id)
+      .order("created_at", { ascending: false });
+    setAgreements(agreementsData ?? []);
+
+    if (agreementsData && agreementsData.length > 0) {
+      const vMap: Record<string, AgreementVersion> = {};
+      const versionIds = agreementsData
+        .map((a) => a.current_version_id)
+        .filter(Boolean) as string[];
+      if (versionIds.length > 0) {
+        const { data: versionsData } = await supabase
+          .from("agreement_versions")
+          .select("id, fields, version_num")
+          .in("id", versionIds);
+        (versionsData ?? []).forEach((v: any) => {
+          vMap[v.id] = v;
+        });
+      }
+      const missingVersionAgreements = agreementsData.filter((a) => !a.current_version_id);
+      for (const a of missingVersionAgreements) {
+        const { data: latestVersion } = await supabase
+          .from("agreement_versions")
+          .select("id, fields, version_num")
+          .eq("agreement_id", a.id)
+          .order("version_num", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (latestVersion) {
+          vMap[`fallback-${a.id}`] = latestVersion as unknown as AgreementVersion;
+        }
+      }
+      setVersions(vMap);
+    }
+  };
+
   if (loading || checking) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -279,44 +322,70 @@ export default function PersonPortal() {
         </Card>
 
         {/* Section 2: My Agreements */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">My Agreements</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {agreements.length === 0 ? (
-              <div className="py-4 text-center">
-                <p className="text-sm font-medium">No agreements yet</p>
-                <p className="text-sm text-muted-foreground mt-1">Agreements shared with you will appear here for review and acceptance.</p>
-              </div>
-            ) : (
-              <ul className="space-y-3">
-                {agreements.map((a) => {
-                  const version = a.current_version_id
-                    ? versions[a.current_version_id]
-                    : versions[`fallback-${a.id}`] ?? null;
-                  const fields = version?.fields as Record<string, string> | undefined;
-                  return (
-                    <li key={a.id} className="rounded-md border px-3 py-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">
-                          {fields?.title || fields?.summary || `Agreement`}
+        {selectedAgreementId ? (
+          <AgreementDetail
+            agreementId={selectedAgreementId}
+            groupId={personInfo.group_id}
+            onBack={() => {
+              setSelectedAgreementId(null);
+              refreshAgreements();
+            }}
+          />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">My Agreements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {agreements.length === 0 ? (
+                <div className="py-4 text-center">
+                  <p className="text-sm font-medium">No agreements yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">Agreements shared with you will appear here for review and acceptance.</p>
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {agreements.map((a) => {
+                    const version = a.current_version_id
+                      ? versions[a.current_version_id]
+                      : versions[`fallback-${a.id}`] ?? null;
+                    const fields = version?.fields as Record<string, string> | undefined;
+                    const needsResponse = a.status === "proposed";
+                    return (
+                      <li
+                        key={a.id}
+                        onClick={() => setSelectedAgreementId(a.id)}
+                        className={`rounded-md border px-3 py-2 cursor-pointer transition-colors hover:bg-muted/50 ${
+                          needsResponse ? "border-primary/40 bg-primary/5" : ""
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">
+                            {fields?.title || fields?.summary || "Agreement"}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            {needsResponse && (
+                              <Badge variant="destructive" className="text-xs">
+                                Needs your response
+                              </Badge>
+                            )}
+                            <Badge variant={a.status === "active" || a.status === "accepted" ? "default" : "secondary"}>
+                              {a.status}
+                            </Badge>
+                          </div>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Created {formatDate(a.created_at)}
+                          {version && ` · v${version.version_num}`}
+                          {needsResponse && " · Tap to review"}
                         </p>
-                        <Badge variant={a.status === "active" ? "default" : "secondary"}>
-                          {a.status}
-                        </Badge>
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Created {formatDate(a.created_at)}
-                        {version && ` · v${version.version_num}`}
-                      </p>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Why am I seeing this? */}
         <div className="text-center">
