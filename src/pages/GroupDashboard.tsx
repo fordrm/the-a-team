@@ -28,6 +28,7 @@ import CreateIntervention from "@/components/interventions/CreateIntervention";
 import InterventionDetail from "@/components/interventions/InterventionDetail";
 import AlertsList from "@/components/alerts/AlertsList";
 import AlertDetail from "@/components/alerts/AlertDetail";
+import IndicatorTrend from "@/components/dashboard/IndicatorTrend";
 
 interface GroupRow { id: string; name: string; }
 interface MemberRow { id: string; user_id: string; role: string; display_name: string | null; is_active: boolean; }
@@ -617,14 +618,17 @@ export default function GroupDashboard() {
           {/* Timeline Tab */}
           <TabsContent value="timeline">
             {timelineView.type === "list" && (
-              <Timeline
-                key={timelineKey}
-                groupId={groupId!}
-                personId={activePersonId}
-                members={members}
-                isGroupMember={isMember}
-                onAddNote={() => setTimelineView({ type: "add" })}
-              />
+              <div className="space-y-4">
+                <IndicatorTrend groupId={groupId!} personId={activePersonId} />
+                <Timeline
+                  key={timelineKey}
+                  groupId={groupId!}
+                  personId={activePersonId}
+                  members={members}
+                  isGroupMember={isMember}
+                  onAddNote={() => setTimelineView({ type: "add" })}
+                />
+              </div>
             )}
             {timelineView.type === "add" && activePersonId && (
               <AddNote
