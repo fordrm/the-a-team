@@ -75,7 +75,7 @@ export default function InterventionDetail({ interventionId, groupId, isCoordina
   }, [interventionId, isCoordinator]);
 
   const handleUpdateStatus = async () => {
-    if (!item || !newStatus) return;
+    if (!item || !newStatus || !user) return;
     setSaving(true);
     try {
       const { error } = await supabase
@@ -84,6 +84,21 @@ export default function InterventionDetail({ interventionId, groupId, isCoordina
         .eq("id", item.id);
       if (error) throw error;
       setItem({ ...item, status: newStatus });
+
+      // Generate alert when stopped or completed
+      if (newStatus === "stopped" || newStatus === "completed") {
+        await supabase.from("alerts").insert({
+          group_id: item.group_id,
+          subject_person_id: item.subject_person_id,
+          created_by_user_id: user.id,
+          type: "intervention_stopped",
+          severity: "tier1",
+          title: `Intervention ${newStatus}: ${item.title.slice(0, 80)}`,
+          source_table: "interventions",
+          source_id: item.id,
+        });
+      }
+
       toast({ title: "Status updated" });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });

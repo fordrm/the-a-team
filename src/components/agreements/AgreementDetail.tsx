@@ -109,9 +109,43 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
     }
   };
 
+  const handleDecline = async () => {
+    if (!user || !latestVersion || !agreement) return;
+    setSubmitting(true);
+    try {
+      const { data: acc, error } = await supabase.from("agreement_acceptances").insert({
+        agreement_version_id: latestVersion.id,
+        agreement_id: agreementId,
+        group_id: groupId,
+        person_user_id: user.id,
+        status: "declined",
+      }).select("id").single();
+      if (error) throw error;
+
+      // Best-effort alert
+      if (acc) {
+        await supabase.from("alerts").insert({
+          group_id: groupId,
+          subject_person_id: agreement.subject_person_id,
+          created_by_user_id: user.id,
+          type: "agreement_declined",
+          severity: "tier2",
+          title: `Agreement declined: ${(latestVersion.fields as any)?.title || "Untitled"}`,
+          source_table: "agreement_acceptances",
+          source_id: acc.id,
+        });
+      }
+
+      toast({ title: "Agreement declined" });
+      fetchAll();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
   const handleModify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !latestVersion) return;
+    if (!user || !latestVersion || !agreement) return;
     setSubmitting(true);
     try {
       // insert new version
@@ -126,15 +160,29 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
       if (vErr) throw vErr;
 
       // insert acceptance as modified
-      const { error: aErr } = await supabase.from("agreement_acceptances").insert({
+      const { data: acc, error: aErr } = await supabase.from("agreement_acceptances").insert({
         agreement_version_id: newV.id,
         agreement_id: agreementId,
         group_id: groupId,
         person_user_id: user.id,
         status: "modified",
         message: modMessage || null,
-      });
+      }).select("id").single();
       if (aErr) throw aErr;
+
+      // Best-effort alert
+      if (acc) {
+        await supabase.from("alerts").insert({
+          group_id: groupId,
+          subject_person_id: agreement.subject_person_id,
+          created_by_user_id: user.id,
+          type: "agreement_modified",
+          severity: "tier2",
+          title: `Agreement modified: ${modFields.title || "Untitled"}`,
+          source_table: "agreement_acceptances",
+          source_id: acc.id,
+        });
+      }
 
       toast({ title: "Modification submitted" });
       setModifying(false);
@@ -210,6 +258,9 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
               setModifying(true);
             }}>
               <Pencil className="mr-1 h-4 w-4" /> Modify
+            </Button>
+            <Button size="sm" variant="destructive" onClick={handleDecline} disabled={submitting}>
+              Decline
             </Button>
           </div>
         )}

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle, Activity } from "lucide-react";
+import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle, Activity, Bell } from "lucide-react";
 import Timeline from "@/components/timeline/Timeline";
 import AddNote from "@/components/timeline/AddNote";
 import AgreementsList from "@/components/agreements/AgreementsList";
@@ -21,6 +21,8 @@ import ContradictionDetail from "@/components/contradictions/ContradictionDetail
 import InterventionsList from "@/components/interventions/InterventionsList";
 import CreateIntervention from "@/components/interventions/CreateIntervention";
 import InterventionDetail from "@/components/interventions/InterventionDetail";
+import AlertsList from "@/components/alerts/AlertsList";
+import AlertDetail from "@/components/alerts/AlertDetail";
 
 interface GroupRow { id: string; name: string; }
 interface MemberRow { id: string; user_id: string; role: string; display_name: string | null; is_active: boolean; }
@@ -30,6 +32,7 @@ type AgreementView = { type: "list" } | { type: "create" } | { type: "detail"; a
 type TimelineView = { type: "list" } | { type: "add" };
 type ContradictionView = { type: "list" } | { type: "create" } | { type: "detail"; id: string };
 type InterventionView = { type: "list" } | { type: "create" } | { type: "detail"; id: string };
+type AlertView = { type: "list" } | { type: "detail"; id: string };
 
 export default function GroupDashboard() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -49,6 +52,8 @@ export default function GroupDashboard() {
   const [contradictionKey, setContradictionKey] = useState(0);
   const [interventionView, setInterventionView] = useState<InterventionView>({ type: "list" });
   const [interventionKey, setInterventionKey] = useState(0);
+  const [alertView, setAlertView] = useState<AlertView>({ type: "list" });
+  const [alertKey, setAlertKey] = useState(0);
 
   // invite form
   const [inviteUserId, setInviteUserId] = useState("");
@@ -146,6 +151,7 @@ export default function GroupDashboard() {
             <TabsTrigger value="timeline" className="flex-1">Timeline</TabsTrigger>
             {!isSubjectPerson && <TabsTrigger value="contradictions" className="flex-1">Conflicts</TabsTrigger>}
             <TabsTrigger value="interventions" className="flex-1">Interventions</TabsTrigger>
+            {!isSubjectPerson && <TabsTrigger value="alerts" className="flex-1">Alerts</TabsTrigger>}
           </TabsList>
 
           {/* Members Tab */}
@@ -338,6 +344,38 @@ export default function GroupDashboard() {
               />
             )}
           </TabsContent>
+
+          {/* Alerts Tab */}
+          {!isSubjectPerson && (
+            <TabsContent value="alerts">
+              {alertView.type === "list" && (
+                <AlertsList
+                  key={alertKey}
+                  groupId={groupId!}
+                  personId={activePersonId}
+                  onView={(id) => setAlertView({ type: "detail", id })}
+                />
+              )}
+              {alertView.type === "detail" && (
+                <AlertDetail
+                  alertId={alertView.id}
+                  groupId={groupId!}
+                  isCoordinator={isCoordinator}
+                  onBack={() => { setAlertView({ type: "list" }); setAlertKey(k => k + 1); }}
+                  onNavigateSource={(table, id) => {
+                    if (table === "contradictions") {
+                      setContradictionView({ type: "detail", id });
+                    } else if (table === "interventions") {
+                      setInterventionView({ type: "detail", id });
+                    } else if (table === "agreement_acceptances") {
+                      // Navigate to agreements tab — source_id is the acceptance, but we'd need agreement_id
+                      // For now just go back to alerts
+                    }
+                  }}
+                />
+              )}
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
