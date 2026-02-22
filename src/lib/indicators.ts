@@ -80,3 +80,21 @@ export const INDICATOR_LABEL_MAP: Record<string, string> = Object.fromEntries(
 export const INDICATOR_CATEGORY_MAP: Record<string, string> = Object.fromEntries(
   INDICATOR_CATEGORIES.flatMap(c => c.indicators.map(i => [i.key, c.label]))
 );
+
+/** Returns the Tailwind bg + text classes for an indicator's category badge */
+export function getIndicatorBadgeColor(key: string): string {
+  const colorMap: Record<string, string> = {
+    "purple": "bg-purple-100 text-purple-700 border-purple-200",
+    "orange": "bg-orange-100 text-orange-700 border-orange-200",
+    "blue": "bg-blue-100 text-blue-700 border-blue-200",
+    "amber": "bg-amber-100 text-amber-700 border-amber-200",
+    "red": "bg-red-100 text-red-700 border-red-200",
+  };
+  for (const cat of INDICATOR_CATEGORIES) {
+    if (cat.indicators.some(i => i.key === key)) {
+      const base = cat.color.replace("text-", "").replace(/(-\d+)$/, "");
+      return colorMap[base] || "bg-gray-100 text-gray-700 border-gray-200";
+    }
+  }
+  return "bg-gray-100 text-gray-700 border-gray-200";
+}
