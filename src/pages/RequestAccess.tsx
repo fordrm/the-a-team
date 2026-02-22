@@ -58,7 +58,6 @@ export default function RequestAccess() {
 
   const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Resolved groupId:", groupId);
     if (!groupId || groupId.includes(":")) {
       toast({ title: "Error", description: "Invalid group id. Reload page.", variant: "destructive" });
       return;

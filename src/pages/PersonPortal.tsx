@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDate } from "@/lib/formatDate";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -233,7 +234,7 @@ export default function PersonPortal() {
                   <li key={n.id} className="rounded-md border px-3 py-2">
                     <p className="text-sm">{n.body}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {new Date(n.occurred_at).toLocaleDateString()}
+                      {formatDate(n.occurred_at)}
                       {n.channel && ` · ${n.channel}`}
                     </p>
                   </li>
@@ -270,7 +271,7 @@ export default function PersonPortal() {
                         </Badge>
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Created {new Date(a.created_at).toLocaleDateString()}
+                        Created {formatDate(a.created_at)}
                         {version && ` · v${version.version_num}`}
                       </p>
                     </li>

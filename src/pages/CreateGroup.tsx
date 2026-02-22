@@ -15,13 +15,19 @@ export default function CreateGroup() {
   const { toast } = useToast();
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [checkingRole, setCheckingRole] = useState(true);
 
   // Redirect supported persons away from this page
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setCheckingRole(false);
+      return;
+    }
     supabase.from("persons").select("id").eq("user_id", user.id).limit(1).then(({ data }) => {
       if (data && data.length > 0) {
         navigate("/person-portal", { replace: true });
+      } else {
+        setCheckingRole(false);
       }
     });
   }, [user, navigate]);
@@ -33,18 +39,18 @@ export default function CreateGroup() {
       const { data: groupId, error } = await supabase.rpc("bootstrap_create_group", {
         p_name: name.trim(),
       });
-      if (error) {
-        console.error("CreateGroup:bootstrap error", error);
-        throw error;
-      }
+      if (error) throw error;
       navigate(`/group/${groupId}`);
     } catch (err: any) {
-      console.error("Create group error:", err.message);
       toast({ title: "Error creating group", description: err.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (checkingRole) {
+    return <div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Loading…</p></div>;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">

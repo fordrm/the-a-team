@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDate } from "@/lib/formatDate";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -104,7 +105,7 @@ export default function ContradictionsList({ groupId, personId, onCreateNew, onV
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <span>{c.type}</span>
                     <span>·</span>
-                    <span>{new Date(c.created_at).toLocaleDateString()}</span>
+                    <span>{formatDate(c.created_at)}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">

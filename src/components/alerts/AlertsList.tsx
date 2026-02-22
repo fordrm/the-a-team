@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDateTime } from "@/lib/formatDate";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { ensureUnresolvedContradictionAlert } from "@/lib/alertsService";
@@ -139,7 +140,7 @@ export default function AlertsList({ groupId, personId, isCoordinator, onView }:
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Badge variant={severityColor(a.severity)} className="text-xs">{a.severity}</Badge>
                   <Badge variant="outline" className="text-xs">{a.type.replace(/_/g, " ")}</Badge>
-                  <span>{new Date(a.created_at).toLocaleString()}</span>
+                  <span>{formatDateTime(a.created_at)}</span>
                 </div>
               </li>
             ))}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDate } from "@/lib/formatDate";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -119,8 +120,8 @@ export default function InterventionsList({ groupId, personId, onCreateNew, onVi
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Badge variant="outline" className="text-xs">{i.type.replace(/_/g, " ")}</Badge>
                   <span>{i.visibility_tier.replace(/_/g, " ")}</span>
-                  {i.start_at && <span>from {new Date(i.start_at).toLocaleDateString()}</span>}
-                  {i.end_at && <span>to {new Date(i.end_at).toLocaleDateString()}</span>}
+                  {i.start_at && <span>from {formatDate(i.start_at)}</span>}
+                  {i.end_at && <span>to {formatDate(i.end_at)}</span>}
                 </div>
               </li>
             ))}

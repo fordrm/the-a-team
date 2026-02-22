@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDateTime } from "@/lib/formatDate";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -112,7 +113,7 @@ export default function ContradictionDetail({ contradictionId, groupId, isCoordi
           <Badge variant={severityVariant(item.severity)} className="text-xs">{item.severity}</Badge>
           <Badge variant="outline" className="text-xs">{item.status}</Badge>
         </div>
-        <p className="text-xs text-muted-foreground">{item.type.replace(/_/g, " ")} · {new Date(item.created_at).toLocaleString()}</p>
+        <p className="text-xs text-muted-foreground">{item.type.replace(/_/g, " ")} · {formatDateTime(item.created_at)}</p>
       </CardHeader>
       <CardContent className="space-y-4">
         {item.details && (
@@ -128,7 +129,7 @@ export default function ContradictionDetail({ contradictionId, groupId, isCoordi
             <ul className="space-y-1">
               {linkedNotes.map(n => (
                 <li key={n.id} className="rounded border p-2 text-sm">
-                  <span className="text-xs text-muted-foreground">{new Date(n.occurred_at).toLocaleString()}</span>
+                  <span className="text-xs text-muted-foreground">{formatDateTime(n.occurred_at)}</span>
                   <p>{n.body}</p>
                 </li>
               ))}
