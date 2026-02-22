@@ -277,13 +277,13 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
         )}
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-2">Current Version</p>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {activeFields.length > 0 ? activeFields.map(({ label, key, computed }) => (
               <div key={key}>
-                <p className="text-xs font-medium text-muted-foreground">{label}</p>
-                <p className="text-sm whitespace-pre-wrap">
+                <span className="text-xs text-muted-foreground block">{label}</span>
+                <span className="text-sm whitespace-pre-wrap">
                   {computed ? computed(fields) : (typeof fields[key] === "string" ? fields[key] : JSON.stringify(fields[key]))}
-                </p>
+                </span>
               </div>
             )) : (
               <p className="text-sm text-muted-foreground">No content in this version.</p>
@@ -345,23 +345,25 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
 
         {/* Actions for supported person */}
         {isSubjectPerson && agreement.status === "proposed" && !hasAnyResponse && !modifying && (
-          <div className="flex gap-2 border-t pt-3">
-            <Button size="sm" onClick={handleAccept} disabled={submitting}>
-              <Check className="mr-1 h-4 w-4" /> Accept
+          <div className="grid grid-cols-1 gap-2 border-t pt-3">
+            <Button className="h-12 text-base" onClick={handleAccept} disabled={submitting}>
+              <Check className="mr-2 h-5 w-5" /> Accept Agreement
             </Button>
-            <Button size="sm" variant="outline" onClick={() => {
-              const preFilled = { ...fields };
-              if (fields.cadence && !fields.cadence_or_due_date) {
-                preFilled.cadence_or_due_date = formatCadenceDisplay(fields);
-              }
-              setModFields(preFilled);
-              setModifying(true);
-            }}>
-              <Pencil className="mr-1 h-4 w-4" /> Modify
-            </Button>
-            <Button size="sm" variant="destructive" onClick={handleDecline} disabled={submitting}>
-              Decline
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" className="h-11" onClick={() => {
+                const preFilled = { ...fields };
+                if (fields.cadence && !fields.cadence_or_due_date) {
+                  preFilled.cadence_or_due_date = formatCadenceDisplay(fields);
+                }
+                setModFields(preFilled);
+                setModifying(true);
+              }}>
+                <Pencil className="mr-2 h-4 w-4" /> Modify
+              </Button>
+              <Button variant="outline" className="h-11 text-destructive hover:text-destructive" onClick={handleDecline} disabled={submitting}>
+                <X className="mr-2 h-4 w-4" /> Decline
+              </Button>
+            </div>
           </div>
         )}
 

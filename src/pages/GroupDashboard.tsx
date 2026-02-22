@@ -312,7 +312,7 @@ export default function GroupDashboard() {
   const needsPersonSelector = !isSubjectPerson && personRequiredTabs.includes(activeTab);
 
   return (
-    <div className="min-h-screen px-4 py-8">
+    <div className="min-h-screen px-3 sm:px-6 py-4 sm:py-8">
       <div className="mx-auto max-w-2xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -327,11 +327,13 @@ export default function GroupDashboard() {
 
         {/* Active Person Selector — shown above tabs when relevant */}
         {!isSubjectPerson && persons.length > 0 && (
-          <div className="flex items-center gap-3 rounded-md border border-border bg-muted/50 px-3 py-2">
-            <User className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-sm text-muted-foreground shrink-0">Viewing:</span>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-2">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-sm text-muted-foreground shrink-0">Viewing:</span>
+            </div>
             <Select value={activePersonId ?? ""} onValueChange={(val) => selectPerson(val || null)}>
-              <SelectTrigger className="h-8 flex-1">
+              <SelectTrigger className="h-9 sm:h-8 flex-1">
                 <SelectValue placeholder="Choose a supported person" />
               </SelectTrigger>
               <SelectContent className="bg-background z-50">

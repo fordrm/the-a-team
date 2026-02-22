@@ -367,7 +367,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
 
       {/* Filter bar */}
       {items.length > 0 && (
-        <div className="px-6 pb-3 flex flex-wrap gap-2">
+        <div className="px-3 sm:px-6 pb-3 flex flex-wrap gap-2">
           <Select value={filterType} onValueChange={setFilterType}>
             <SelectTrigger className="w-[130px] h-8 text-xs">
               <SelectValue />
@@ -431,7 +431,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                 const showDateHeader = currentGroup !== prevGroup;
 
                 const dateHeader = showDateHeader ? (
-                  <li key={`date-${currentGroup}-${index}`} className="flex items-center gap-3 py-1">
+                  <li key={`date-${currentGroup}-${index}`} className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm flex items-center gap-3 py-1.5 -mx-1 px-1">
                     <div className="flex-1 border-t border-border" />
                     <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{currentGroup}</span>
                     <div className="flex-1 border-t border-border" />
@@ -580,19 +580,26 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                         </Tooltip>
                       </div>
 
-                      {/* Restated agreement */}
-                      <div className="text-sm">
+                      {/* Restated agreement — wraps on mobile */}
+                      <div className="text-sm leading-relaxed">
                         <span className="font-medium">{c.title}</span>
                         {c.i_will_statement && (
-                          <span className="text-muted-foreground">
-                            {" · "}"{c.i_will_statement}"
+                          <span className="text-muted-foreground block sm:inline">
+                            <span className="hidden sm:inline"> · </span>
+                            <span className="italic">"{c.i_will_statement}"</span>
                           </span>
                         )}
                         {c.cadence_display && (
-                          <span className="text-muted-foreground"> · {c.cadence_display}</span>
+                          <span className="text-muted-foreground block sm:inline">
+                            <span className="hidden sm:inline"> · </span>
+                            {c.cadence_display}
+                          </span>
                         )}
                         {c.duration_display && (
-                          <span className="text-muted-foreground"> · {c.duration_display}</span>
+                          <span className="text-muted-foreground block sm:inline">
+                            <span className="hidden sm:inline"> · </span>
+                            {c.duration_display}
+                          </span>
                         )}
                       </div>
 

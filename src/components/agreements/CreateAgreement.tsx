@@ -159,6 +159,7 @@ export default function CreateAgreement({ groupId, personId, onBack, onCreated }
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="e.g., Medication check-in"
+              className="text-base sm:text-sm"
             />
           </div>
 
@@ -170,13 +171,15 @@ export default function CreateAgreement({ groupId, personId, onBack, onCreated }
               value={iWill}
               onChange={e => setIWill(e.target.value)}
               placeholder="I'll confirm I took my morning meds"
+              className="text-base sm:text-sm"
             />
           </div>
 
-          {/* Schedule row: frequency + time + duration on one line */}
-          <div className="space-y-1.5">
+          {/* Schedule */}
+          <div className="space-y-2">
             <Label className="text-xs">Schedule</Label>
-            <div className="flex gap-1.5 flex-wrap">
+            {/* Row 1: Frequency + optional time */}
+            <div className="flex gap-2">
               <Select
                 value={cadence.frequency}
                 onValueChange={(val) => setCadence(prev => ({
@@ -186,7 +189,7 @@ export default function CreateAgreement({ groupId, personId, onBack, onCreated }
                   custom_text: val === "custom" ? prev.custom_text : undefined,
                 }))}
               >
-                <SelectTrigger className="w-[110px]">
+                <SelectTrigger className="flex-1 h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -197,14 +200,20 @@ export default function CreateAgreement({ groupId, personId, onBack, onCreated }
               </Select>
 
               {cadence.frequency !== "custom" && (
-                <Input
-                  type="time"
-                  className="w-[100px]"
-                  value={cadence.time || ""}
-                  onChange={e => setCadence(prev => ({ ...prev, time: e.target.value }))}
-                />
+                <div className="flex-1">
+                  <Input
+                    type="time"
+                    className="w-full h-9 text-base sm:text-sm"
+                    value={cadence.time || ""}
+                    onChange={e => setCadence(prev => ({ ...prev, time: e.target.value }))}
+                    placeholder="Time"
+                  />
+                </div>
               )}
+            </div>
 
+            {/* Row 2: Duration */}
+            <div className="flex gap-2">
               <Select
                 value={duration.type}
                 onValueChange={(val) => setDuration(prev => ({
@@ -213,39 +222,41 @@ export default function CreateAgreement({ groupId, personId, onBack, onCreated }
                   days: val === "fixed" ? (prev.days || 30) : undefined,
                 }))}
               >
-                <SelectTrigger className="w-[110px]">
+                <SelectTrigger className="flex-1 h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fixed">Fixed</SelectItem>
+                  <SelectItem value="fixed">Fixed duration</SelectItem>
                   <SelectItem value="ongoing">Ongoing</SelectItem>
                   <SelectItem value="until_review">Until review</SelectItem>
                 </SelectContent>
               </Select>
 
               {duration.type === "fixed" && (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <Input
                     type="number"
-                    className="w-16"
+                    min={1}
+                    max={365}
+                    className="w-16 h-9 text-base sm:text-sm"
                     value={duration.days || 30}
                     onChange={e => setDuration(prev => ({ ...prev, days: parseInt(e.target.value) || 30 }))}
                   />
-                  <span className="text-xs text-muted-foreground">d</span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">days</span>
                 </div>
               )}
             </div>
 
             {/* Day picker for weekly */}
             {cadence.frequency === "weekly" && (
-              <div className="flex gap-1 mt-1">
+              <div className="flex gap-1">
                 {DAY_OPTIONS.map((d, i) => (
                   <Button
                     key={`${d.value}-${i}`}
                     type="button"
                     size="sm"
                     variant={cadence.days?.includes(d.value) ? "default" : "outline"}
-                    className="h-7 w-7 text-xs p-0"
+                    className="h-8 w-8 text-xs px-0"
                     onClick={() => {
                       setCadence(prev => {
                         const current = prev.days || [];
@@ -264,10 +275,10 @@ export default function CreateAgreement({ groupId, personId, onBack, onCreated }
 
             {cadence.frequency === "custom" && (
               <Input
-                className="mt-1"
                 value={cadence.custom_text || ""}
                 onChange={e => setCadence(prev => ({ ...prev, custom_text: e.target.value }))}
                 placeholder="e.g., every other Tuesday"
+                className="text-base sm:text-sm"
               />
             )}
           </div>
