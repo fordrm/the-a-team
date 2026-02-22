@@ -66,6 +66,12 @@ Deno.serve(async (req) => {
       return jsonResponse(req, { error: "groupId, personId, and email are required", step: "parse_body" }, 400);
     }
 
+    // M-3: Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return jsonResponse(req, { error: "Invalid email format", step: "parse_body" }, 400);
+    }
+
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     // --- Step: coordinator_check ---
@@ -167,6 +173,6 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("[invite-supported-person] step=edge_function unhandled error=", err);
-    return jsonResponse(req, { error: err.message || "unknown", step: "edge_function" }, 500);
+    return jsonResponse(req, { error: "An unexpected error occurred. Please try again.", step: "edge_function" }, 500);
   }
 });

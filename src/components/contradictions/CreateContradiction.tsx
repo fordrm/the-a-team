@@ -56,21 +56,34 @@ export default function CreateContradiction({ groupId, personId, onBack, onCreat
           .eq("group_id", groupId)
           .eq("subject_person_id", personId),
       ]);
+      if (nRes.error) console.error("Notes fetch error:", nRes.error);
+      if (aRes.error) console.error("Agreements fetch error:", aRes.error);
       setNotes(nRes.data ?? []);
-      // fetch latest version titles for agreements
+      // Batch fetch latest version titles for agreements (M-6)
       const agrs = aRes.data ?? [];
-      const withTitles: AgreementOption[] = [];
-      for (const a of agrs) {
-        const { data: vd } = await supabase
+      if (agrs.length > 0) {
+        const agrIds = agrs.map(a => a.id);
+        const { data: allVers } = await supabase
           .from("agreement_versions")
-          .select("fields")
-          .eq("agreement_id", a.id)
-          .order("version_num", { ascending: false })
-          .limit(1);
-        const fields = vd?.[0]?.fields as any;
-        withTitles.push({ id: a.id, title: fields?.title || "Untitled" });
+          .select("agreement_id, fields")
+          .in("agreement_id", agrIds)
+          .order("version_num", { ascending: false });
+
+        const latestByAgreement: Record<string, any> = {};
+        for (const v of allVers ?? []) {
+          if (!latestByAgreement[v.agreement_id]) {
+            latestByAgreement[v.agreement_id] = v;
+          }
+        }
+
+        const withTitles: AgreementOption[] = agrs.map(a => ({
+          id: a.id,
+          title: (latestByAgreement[a.id]?.fields as any)?.title || "Untitled",
+        }));
+        setAgreements(withTitles);
+      } else {
+        setAgreements([]);
       }
-      setAgreements(withTitles);
     };
     fetchRelated();
   }, [groupId, personId]);

@@ -61,6 +61,18 @@ Deno.serve(async (req) => {
       );
     }
 
+    // M-3: Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return new Response(
+        JSON.stringify({ error: "Invalid email format" }),
+        {
+          status: 400,
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const allowedRoles = ["coordinator", "supporter", "supported_person"];
     if (!allowedRoles.includes(role)) {
       return new Response(
@@ -199,8 +211,9 @@ Deno.serve(async (req) => {
       }
     );
   } catch (err) {
+    console.error("[invite-to-group] unhandled error:", err);
     return new Response(
-      JSON.stringify({ error: err.message || "Internal error" }),
+      JSON.stringify({ error: "An unexpected error occurred. Please try again." }),
       {
         status: 500,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },

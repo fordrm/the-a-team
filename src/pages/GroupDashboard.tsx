@@ -87,14 +87,14 @@ export default function GroupDashboard() {
   const [savingName, setSavingName] = useState(false);
   const [deletingPersonId, setDeletingPersonId] = useState<string | null>(null);
 
-  // Persist active person in localStorage
+  // Persist active person in sessionStorage (M-2: prevent leaking on shared devices)
   const selectPerson = (id: string | null) => {
     setActivePersonId(id);
     if (groupId) {
       if (id) {
-        try { localStorage.setItem(PERSON_KEY(groupId), id); } catch (_) {}
+        try { sessionStorage.setItem(PERSON_KEY(groupId), id); } catch (_) {}
       } else {
-        try { localStorage.removeItem(PERSON_KEY(groupId)); } catch (_) {}
+        try { sessionStorage.removeItem(PERSON_KEY(groupId)); } catch (_) {}
       }
     }
   };
@@ -143,16 +143,16 @@ export default function GroupDashboard() {
 
     // Restore or validate persisted person selection
     if (groupId) {
-      const stored = localStorage.getItem(PERSON_KEY(groupId));
+      const stored = sessionStorage.getItem(PERSON_KEY(groupId));
       if (stored && fetchedPersons.some(p => p.id === stored)) {
         setActivePersonId(stored);
       } else if (fetchedPersons.length === 1) {
         // Auto-select if only one person
         setActivePersonId(fetchedPersons[0].id);
-        try { localStorage.setItem(PERSON_KEY(groupId), fetchedPersons[0].id); } catch (_) {}
+        try { sessionStorage.setItem(PERSON_KEY(groupId), fetchedPersons[0].id); } catch (_) {}
       } else {
         setActivePersonId(null);
-        try { localStorage.removeItem(PERSON_KEY(groupId)); } catch (_) {}
+        try { sessionStorage.removeItem(PERSON_KEY(groupId)); } catch (_) {}
       }
     }
 

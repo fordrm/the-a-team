@@ -51,24 +51,37 @@ export default function AgreementsList({ groupId, personId, onCreateNew, onViewA
     if (!personId) { setAgreements([]); setLoading(false); return; }
     const fetch = async () => {
       setLoading(true);
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("agreements")
         .select("id, subject_person_id, created_by_user_id, status, current_version_id, created_at")
         .eq("group_id", groupId)
         .eq("subject_person_id", personId);
+      if (error) {
+        console.error("AgreementsList fetch error:", error);
+        setLoading(false);
+        return;
+      }
       const items = data ?? [];
       setAgreements(items);
 
-      // fetch latest version for each agreement
+      // Batch fetch all versions for these agreements in one query (M-6)
       const versionMap: Record<string, VersionRow> = {};
-      for (const a of items) {
-        const { data: vData } = await supabase
+      if (items.length > 0) {
+        const agreementIds = items.map(a => a.id);
+        const { data: allVersions, error: vError } = await supabase
           .from("agreement_versions")
           .select("id, agreement_id, version_num, fields, proposed_by_user_id, created_at")
-          .eq("agreement_id", a.id)
-          .order("version_num", { ascending: false })
-          .limit(1);
-        if (vData?.[0]) versionMap[a.id] = vData[0] as VersionRow;
+          .in("agreement_id", agreementIds)
+          .order("version_num", { ascending: false });
+
+        if (!vError && allVersions) {
+          // Keep only the latest version per agreement
+          for (const v of allVersions) {
+            if (!versionMap[v.agreement_id]) {
+              versionMap[v.agreement_id] = v as VersionRow;
+            }
+          }
+        }
       }
       setVersions(versionMap);
       setLoading(false);

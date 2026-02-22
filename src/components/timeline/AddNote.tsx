@@ -91,7 +91,13 @@ export default function AddNote({ groupId, personId, onBack, onCreated }: Props)
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>When did this occur?</Label>
-            <Input type="datetime-local" value={occurredAt} onChange={e => setOccurredAt(e.target.value)} required />
+<Input
+              type="datetime-local"
+              value={occurredAt}
+              onChange={e => setOccurredAt(e.target.value)}
+              max={new Date().toISOString().slice(0, 16)}
+              required
+            />
           </div>
 
           <div className="space-y-2">
