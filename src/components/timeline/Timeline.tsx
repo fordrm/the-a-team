@@ -7,8 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Clock, Plus, ChevronDown, Eye, EyeOff, Shield, Activity, Pin, FileText, Check, Pencil, X, XCircle } from "lucide-react";
+import { Clock, Plus, ChevronDown, ChevronRight, Eye, EyeOff, Shield, Activity, Pin, FileText, Check, Pencil, X, XCircle, Paperclip } from "lucide-react";
 import { INDICATOR_LABEL_MAP, ALL_INDICATORS, getIndicatorBadgeColor } from "@/lib/indicators";
+import { formatCadenceDisplay, formatDurationDisplay, computeFieldDiffs } from "@/types/agreements";
+import type { VersionFields, FieldDiff } from "@/types/agreements";
 
 interface NoteRow {
   id: string;
@@ -43,10 +45,27 @@ interface AgreementEventRow {
   agreement_title: string;
 }
 
+interface CollapsedAgreement {
+  agreement_id: string;
+  title: string;
+  i_will_statement?: string;
+  cadence_display?: string;
+  duration_display?: string;
+  terminal_status: string;
+  terminal_date: string;
+  events: AgreementEventRow[];
+  diffs: FieldDiff[];
+  first_version_fields?: VersionFields;
+  final_version_fields?: VersionFields;
+  created_by: string;
+  resolved_by?: string;
+}
+
 type TimelineItem =
   | { kind: "note"; date: string; data: NoteRow }
   | { kind: "intervention"; date: string; data: InterventionRow }
-  | { kind: "agreement_event"; date: string; data: AgreementEventRow };
+  | { kind: "agreement_event"; date: string; data: AgreementEventRow }
+  | { kind: "agreement_collapsed"; date: string; data: CollapsedAgreement };
 
 interface Props {
   groupId: string;
@@ -166,40 +185,31 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
 
       const agreementIds = (agreeRes.data ?? []).map((a: any) => a.id);
       let titleMap: Record<string, string> = {};
+      let versionsMap: Record<string, VersionFields[]> = {};
+
       if (agreementIds.length > 0) {
         const { data: versionsData } = await supabase
           .from("agreement_versions")
-          .select("agreement_id, fields")
+          .select("agreement_id, version_num, fields")
           .in("agreement_id", agreementIds)
-          .order("version_num", { ascending: false });
+          .order("version_num", { ascending: true });
+
         (versionsData ?? []).forEach((v: any) => {
-          if (!titleMap[v.agreement_id]) {
-            titleMap[v.agreement_id] = v.fields?.title || "Untitled Agreement";
-          }
+          if (!versionsMap[v.agreement_id]) versionsMap[v.agreement_id] = [];
+          versionsMap[v.agreement_id].push(v.fields as VersionFields);
+          // titleMap uses latest version title
+          titleMap[v.agreement_id] = v.fields?.title || titleMap[v.agreement_id] || "Untitled Agreement";
         });
       }
 
       const agreementIdSet = new Set(agreementIds);
       const rawAcceptances = (accRes.data ?? []).filter((a: any) => agreementIdSet.has(a.agreement_id));
 
-      const acceptanceItems: TimelineItem[] = rawAcceptances.map((a: any) => ({
-        kind: "agreement_event" as const,
-        date: a.created_at,
-        data: {
-          id: a.id,
-          agreement_id: a.agreement_id,
-          status: a.status,
-          message: a.message,
-          person_user_id: a.person_user_id,
-          created_at: a.created_at,
-          agreement_title: titleMap[a.agreement_id] || "Agreement",
-        } as AgreementEventRow,
-      }));
+      // Group agreement events by agreement_id into collapsed cards
+      const agreementEventsMap: Record<string, AgreementEventRow[]> = {};
 
-      const creationItems: TimelineItem[] = (agreeRes.data ?? []).map((a: any) => ({
-        kind: "agreement_event" as const,
-        date: a.created_at,
-        data: {
+      (agreeRes.data ?? []).forEach((a: any) => {
+        const event: AgreementEventRow = {
           id: `created-${a.id}`,
           agreement_id: a.id,
           status: "created",
@@ -207,8 +217,60 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
           person_user_id: a.created_by_user_id,
           created_at: a.created_at,
           agreement_title: titleMap[a.id] || "Agreement",
-        } as AgreementEventRow,
-      }));
+        };
+        if (!agreementEventsMap[a.id]) agreementEventsMap[a.id] = [];
+        agreementEventsMap[a.id].push(event);
+      });
+
+      rawAcceptances.forEach((a: any) => {
+        const event: AgreementEventRow = {
+          id: a.id,
+          agreement_id: a.agreement_id,
+          status: a.status,
+          message: a.message,
+          person_user_id: a.person_user_id,
+          created_at: a.created_at,
+          agreement_title: titleMap[a.agreement_id] || "Agreement",
+        };
+        if (!agreementEventsMap[a.agreement_id]) agreementEventsMap[a.agreement_id] = [];
+        agreementEventsMap[a.agreement_id].push(event);
+      });
+
+      const collapsedItems: TimelineItem[] = Object.entries(agreementEventsMap).map(([agId, events]) => {
+        const sorted = [...events].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        const newest = sorted[0];
+        const oldest = sorted[sorted.length - 1];
+
+        const versions = versionsMap[agId] || [];
+        const firstFields = versions[0];
+        const finalFields = versions[versions.length - 1] || firstFields;
+
+        const diffs = firstFields && finalFields && versions.length > 1
+          ? computeFieldDiffs(firstFields, finalFields)
+          : [];
+
+        const collapsed: CollapsedAgreement = {
+          agreement_id: agId,
+          title: finalFields?.title || titleMap[agId] || "Agreement",
+          i_will_statement: finalFields?.i_will_statement,
+          cadence_display: finalFields ? formatCadenceDisplay(finalFields) : undefined,
+          duration_display: finalFields ? formatDurationDisplay(finalFields) : undefined,
+          terminal_status: newest.status,
+          terminal_date: newest.created_at,
+          events: sorted,
+          diffs,
+          first_version_fields: firstFields,
+          final_version_fields: finalFields,
+          created_by: oldest.person_user_id,
+          resolved_by: newest.status !== "created" ? newest.person_user_id : undefined,
+        };
+
+        return {
+          kind: "agreement_collapsed" as const,
+          date: newest.created_at,
+          data: collapsed,
+        };
+      });
 
       if (personId) {
         const { data: personData } = await supabase
@@ -222,7 +284,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
         }
       }
 
-      setItems(sortItems([...noteItems, ...intItems, ...acceptanceItems, ...creationItems]));
+      setItems(sortItems([...noteItems, ...intItems, ...collapsedItems]));
       setLoading(false);
     };
     fetchAll();
@@ -232,7 +294,9 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
     return items.filter(item => {
       if (filterType === "notes" && item.kind !== "note") return false;
       if (filterType === "interventions" && item.kind !== "intervention") return false;
-      if (filterType === "agreements" && item.kind !== "agreement_event") return false;
+      if (filterType === "agreements" && item.kind !== "agreement_event" && item.kind !== "agreement_collapsed") return false;
+
+      if (item.kind === "agreement_collapsed") return true;
 
       if (item.kind === "note") {
         const n = item.data as NoteRow;
@@ -252,7 +316,6 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
     return filteredItems.slice(0, displayCount);
   }, [filteredItems, displayCount]);
 
-  // Reset pagination when filters change
   useEffect(() => {
     setDisplayCount(PAGE_SIZE);
   }, [filterChannel, filterVisibility, filterHasIndicators, filterType]);
@@ -363,7 +426,6 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
           <TooltipProvider>
             <ul className="space-y-3">
               {visibleItems.map((item, index) => {
-                // Date group header
                 const currentGroup = getDateGroupLabel(item.date);
                 const prevGroup = index > 0 ? getDateGroupLabel(visibleItems[index - 1].date) : null;
                 const showDateHeader = currentGroup !== prevGroup;
@@ -376,7 +438,6 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                   </li>
                 ) : null;
 
-                // "New since last visit" divider
                 const isNew = lastSeenAt ? new Date(item.date) > new Date(lastSeenAt) : false;
                 const prevIsNew = index > 0 && lastSeenAt
                   ? new Date(visibleItems[index - 1].date) > new Date(lastSeenAt)
@@ -482,7 +543,107 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                       <p className="text-sm font-medium">{i.title}</p>
                     </li>
                   );
+                } else if (item.kind === "agreement_collapsed") {
+                  const c = item.data as CollapsedAgreement;
+                  const terminalConfig = AGREEMENT_STATUS_CONFIG[c.terminal_status] || AGREEMENT_STATUS_CONFIG.created;
+
+                  const summaryLabel = c.terminal_status === "accepted" && c.events.length > 1
+                    ? "Agreement finalized"
+                    : c.terminal_status === "accepted"
+                    ? "Agreement accepted"
+                    : c.terminal_status === "declined"
+                    ? "Agreement declined"
+                    : c.terminal_status === "withdrawn"
+                    ? "Agreement withdrawn"
+                    : c.terminal_status === "modified"
+                    ? "Awaiting response"
+                    : "Agreement proposed";
+
+                  const participants = [
+                    authorName(c.created_by),
+                    c.resolved_by && c.resolved_by !== c.created_by ? authorName(c.resolved_by) : null,
+                  ].filter(Boolean).join(" → ");
+
+                  itemElement = (
+                    <li key={`agree-collapsed-${c.agreement_id}`} className={`rounded-md border border-border/60 p-3 space-y-2 ${newClass}`}>
+                      {/* Header */}
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 font-medium text-foreground">
+                          {terminalConfig.icon}
+                          <span>{summaryLabel}</span>
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-muted-foreground">{formatRelativeTime(c.terminal_date)}</span>
+                          </TooltipTrigger>
+                          <TooltipContent>{formatFullDateTime(c.terminal_date)}</TooltipContent>
+                        </Tooltip>
+                      </div>
+
+                      {/* Restated agreement */}
+                      <div className="text-sm">
+                        <span className="font-medium">{c.title}</span>
+                        {c.i_will_statement && (
+                          <span className="text-muted-foreground">
+                            {" · "}"{c.i_will_statement}"
+                          </span>
+                        )}
+                        {c.cadence_display && (
+                          <span className="text-muted-foreground"> · {c.cadence_display}</span>
+                        )}
+                        {c.duration_display && (
+                          <span className="text-muted-foreground"> · {c.duration_display}</span>
+                        )}
+                      </div>
+
+                      {/* Field diffs */}
+                      {c.diffs.length > 0 && (
+                        <div className="space-y-0.5">
+                          {c.diffs.slice(0, 3).map((d, i) => (
+                            <p key={i} className="text-xs text-muted-foreground">
+                              <Paperclip className="inline h-3 w-3 mr-1" />
+                              {d.label}: <span className="line-through">{d.oldValue}</span>{" → "}<span className="font-medium text-foreground">{d.newValue}</span>
+                            </p>
+                          ))}
+                          {c.diffs.length > 3 && (
+                            <p className="text-xs text-muted-foreground italic">and {c.diffs.length - 3} more changes</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Expandable event history */}
+                      {c.events.length > 1 && (
+                        <Collapsible>
+                          <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                            <ChevronRight className="h-3 w-3 transition-transform ui-open:rotate-90" />
+                            {c.events.length} events · {participants}
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="mt-2 space-y-1.5 pl-4 border-l-2 border-border">
+                            {c.events.map(ev => {
+                              const evConfig = AGREEMENT_STATUS_CONFIG[ev.status] || AGREEMENT_STATUS_CONFIG.created;
+                              return (
+                                <div key={ev.id} className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
+                                  {evConfig.icon}
+                                  <span className="font-medium text-foreground">{evConfig.label}</span>
+                                  {ev.message && <span className="italic">— "{ev.message}"</span>}
+                                  <span className="ml-auto text-muted-foreground/70">
+                                    {authorName(ev.person_user_id)} · {formatRelativeTime(ev.created_at)}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
+
+                      {/* Single event — just show participants */}
+                      {c.events.length === 1 && (
+                        <p className="text-xs text-muted-foreground">{participants}</p>
+                      )}
+                    </li>
+                  );
                 } else if (item.kind === "agreement_event") {
+                  // Fallback for ungrouped events (shouldn't normally fire)
                   const e = item.data as AgreementEventRow;
                   const config = AGREEMENT_STATUS_CONFIG[e.status] || AGREEMENT_STATUS_CONFIG.created;
                   itemElement = (
@@ -512,7 +673,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                 }
 
                 return (
-                  <React.Fragment key={`frag-${item.kind}-${item.kind === "note" ? item.data.id : item.kind === "intervention" ? item.data.id : (item.data as AgreementEventRow).id}`}>
+                  <React.Fragment key={`frag-${item.kind}-${item.kind === "note" ? item.data.id : item.kind === "intervention" ? item.data.id : item.kind === "agreement_collapsed" ? (item.data as CollapsedAgreement).agreement_id : (item.data as AgreementEventRow).id}`}>
                     {dateHeader}
                     {newDivider}
                     {itemElement}
