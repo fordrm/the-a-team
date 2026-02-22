@@ -37,6 +37,7 @@ interface Props {
   personId: string | null;
   members: { user_id: string; display_name: string | null }[];
   onAddNote: () => void;
+  isGroupMember?: boolean;
 }
 
 const visibilityIcon = (tier: string) => {
@@ -51,7 +52,7 @@ const visibilityLabel = (tier: string) => {
   return "Supporters only";
 };
 
-export default function Timeline({ groupId, personId, members, onAddNote }: Props) {
+export default function Timeline({ groupId, personId, members, onAddNote, isGroupMember = true }: Props) {
   const [items, setItems] = useState<TimelineItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -118,9 +119,11 @@ export default function Timeline({ groupId, personId, members, onAddNote }: Prop
         <CardTitle className="flex items-center gap-2 text-lg">
           <Clock className="h-5 w-5 text-primary" /> Timeline
         </CardTitle>
-        <Button size="sm" variant="outline" onClick={onAddNote}>
-          <Plus className="mr-1 h-4 w-4" /> Add Note
-        </Button>
+        {isGroupMember && (
+          <Button size="sm" variant="outline" onClick={onAddNote} disabled={!personId}>
+            <Plus className="mr-1 h-4 w-4" /> Add Note
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (

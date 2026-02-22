@@ -716,6 +716,16 @@ export type Database = {
         Returns: string
       }
       bootstrap_create_group: { Args: { p_name: string }; Returns: string }
+      create_agreement_with_version: {
+        Args: {
+          p_body: string
+          p_created_by: string
+          p_group_id: string
+          p_subject_person_id: string
+          p_title: string
+        }
+        Returns: string
+      }
       delete_supported_person: {
         Args: { p_group_id: string; p_person_id: string }
         Returns: undefined
@@ -740,6 +750,10 @@ export type Database = {
       is_subject_person: {
         Args: { _person_id: string; _user_id: string }
         Returns: boolean
+      }
+      propose_agreement_version: {
+        Args: { p_agreement_id: string; p_body: string; p_group_id: string }
+        Returns: string
       }
       upsert_supported_person: {
         Args: { p_group_id: string; p_label: string; p_subject_user_id: string }
