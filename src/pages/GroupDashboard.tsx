@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle, Activity, Bell, Pencil } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle, Activity, Bell, Pencil, Trash2 } from "lucide-react";
 import Timeline from "@/components/timeline/Timeline";
 import AddNote from "@/components/timeline/AddNote";
 import AgreementsList from "@/components/agreements/AgreementsList";
@@ -74,6 +75,26 @@ export default function GroupDashboard() {
   const [editNameMemberId, setEditNameMemberId] = useState<string | null>(null);
   const [editNameValue, setEditNameValue] = useState("");
   const [savingName, setSavingName] = useState(false);
+  const [deletingPersonId, setDeletingPersonId] = useState<string | null>(null);
+
+  const handleDeletePerson = async (personId: string) => {
+    if (!groupId) return;
+    setDeletingPersonId(personId);
+    try {
+      const { error } = await supabase.rpc("delete_supported_person", {
+        p_group_id: groupId,
+        p_person_id: personId,
+      });
+      if (error) throw error;
+      toast({ title: "Person deleted", description: "Supported person and all related data removed." });
+      if (activePersonId === personId) setActivePersonId(null);
+      fetchData();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setDeletingPersonId(null);
+    }
+  };
 
   const fetchData = async () => {
     if (!groupId) return;
@@ -334,7 +355,41 @@ export default function GroupDashboard() {
                         }`}
                       >
                         <span className="font-medium">{p.label}</span>
-                        {activePersonId === p.id && <span className="text-xs text-primary font-medium">Active</span>}
+                        <div className="flex items-center gap-2">
+                          {activePersonId === p.id && <span className="text-xs text-primary font-medium">Active</span>}
+                          {isCoordinator && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="text-muted-foreground hover:text-destructive"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="Delete person"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete "{p.label}"?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete this supported person and all their related data (agreements, notes, interventions, contradictions, alerts, and consents). This cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    onClick={() => handleDeletePerson(p.id)}
+                                    disabled={deletingPersonId === p.id}
+                                  >
+                                    {deletingPersonId === p.id ? "Deleting…" : "Delete"}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </div>
                       </li>
                     ))}
                   </ul>
