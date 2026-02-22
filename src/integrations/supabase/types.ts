@@ -737,6 +737,10 @@ export type Database = {
         Args: { _person_id: string; _user_id: string }
         Returns: boolean
       }
+      upsert_supported_person: {
+        Args: { p_group_id: string; p_label: string; p_subject_user_id: string }
+        Returns: string
+      }
       whoami: { Args: never; Returns: string }
     }
     Enums: {

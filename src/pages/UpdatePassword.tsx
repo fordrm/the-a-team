@@ -68,7 +68,7 @@ export default function UpdatePassword() {
       if (err) throw err;
       setSuccess(true);
       setTimeout(() => {
-        window.location.href = "/auth";
+        window.location.href = "/";
       }, 2000);
     } catch (err: any) {
       setError(err.message);

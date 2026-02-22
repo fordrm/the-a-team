@@ -8,7 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info, LogOut } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Info, LogOut, Pencil } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface PersonInfo {
   id: string;
@@ -40,11 +44,17 @@ interface AgreementVersion {
 export default function PersonPortal() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [personInfo, setPersonInfo] = useState<PersonInfo | null>(null);
   const [notes, setNotes] = useState<ContactNote[]>([]);
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [versions, setVersions] = useState<Record<string, AgreementVersion>>({});
   const [checking, setChecking] = useState(true);
+
+  // Edit label
+  const [editLabelOpen, setEditLabelOpen] = useState(false);
+  const [editLabelValue, setEditLabelValue] = useState("");
+  const [savingLabel, setSavingLabel] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -53,7 +63,6 @@ export default function PersonPortal() {
       return;
     }
 
-    // Check if current user is a supported person in any group
     const checkPersonStatus = async () => {
       const { data: persons } = await supabase
         .from("persons")
@@ -66,7 +75,6 @@ export default function PersonPortal() {
       }
 
       const person = persons[0];
-      // Get group name
       const { data: group } = await supabase
         .from("groups")
         .select("name")
@@ -78,7 +86,6 @@ export default function PersonPortal() {
         group_name: group?.name ?? "Unknown Group",
       });
 
-      // Fetch shared notes (RLS will filter to shared_with_person only)
       const { data: notesData } = await supabase
         .from("contact_notes")
         .select("id, body, occurred_at, channel")
@@ -87,7 +94,6 @@ export default function PersonPortal() {
         .order("occurred_at", { ascending: false });
       setNotes(notesData ?? []);
 
-      // Fetch agreements for this person
       const { data: agreementsData } = await supabase
         .from("agreements")
         .select("id, status, created_at, current_version_id")
@@ -96,7 +102,6 @@ export default function PersonPortal() {
         .order("created_at", { ascending: false });
       setAgreements(agreementsData ?? []);
 
-      // Fetch current versions
       if (agreementsData && agreementsData.length > 0) {
         const versionIds = agreementsData
           .map((a) => a.current_version_id)
@@ -120,6 +125,25 @@ export default function PersonPortal() {
     checkPersonStatus();
   }, [user, loading, navigate]);
 
+  const handleSaveLabel = async () => {
+    if (!personInfo) return;
+    setSavingLabel(true);
+    try {
+      const { error } = await supabase
+        .from("persons")
+        .update({ label: editLabelValue.trim() })
+        .eq("id", personInfo.id);
+      if (error) throw error;
+      setPersonInfo({ ...personInfo, label: editLabelValue.trim() });
+      toast({ title: "Name updated" });
+      setEditLabelOpen(false);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingLabel(false);
+    }
+  };
+
   if (loading || checking) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -135,7 +159,7 @@ export default function PersonPortal() {
           <CardHeader className="text-center">
             <CardTitle>No Group Access</CardTitle>
             <CardDescription>
-              You haven't been linked to any support group yet. Ask your coordinator to approve your access request.
+              You haven't been linked to any support group yet. Ask your coordinator to invite you.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
@@ -152,11 +176,21 @@ export default function PersonPortal() {
     <div className="min-h-screen px-4 py-8">
       <div className="mx-auto max-w-2xl space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">My Portal</h1>
-            <p className="text-sm text-muted-foreground">
-              {personInfo.label} — {personInfo.group_name}
-            </p>
+          <div className="flex items-center gap-2">
+            <div>
+              <h1 className="text-2xl font-bold">My Portal</h1>
+              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                {personInfo.label} — {personInfo.group_name}
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-primary"
+                  onClick={() => { setEditLabelValue(personInfo.label); setEditLabelOpen(true); }}
+                  title="Edit my name"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </p>
+            </div>
           </div>
           <Button variant="ghost" size="sm" onClick={() => signOutAndReset()}>
             <LogOut className="mr-1 h-4 w-4" /> Sign Out
@@ -237,6 +271,23 @@ export default function PersonPortal() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Edit Label Dialog */}
+        <Dialog open={editLabelOpen} onOpenChange={setEditLabelOpen}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Edit My Name</DialogTitle></DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Display Name</Label>
+                <Input value={editLabelValue} onChange={e => setEditLabelValue(e.target.value)} placeholder="Your name or alias" />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setEditLabelOpen(false)}>Cancel</Button>
+                <Button onClick={handleSaveLabel} disabled={savingLabel || !editLabelValue.trim()}>{savingLabel ? "Saving…" : "Save"}</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

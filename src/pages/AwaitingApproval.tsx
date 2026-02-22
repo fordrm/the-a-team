@@ -1,35 +1,56 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Navigate, useNavigate } from "react-router-dom";
-import { signOutAndReset } from "@/lib/signOut";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, LogOut } from "lucide-react";
+import { Clock, LogOut, RefreshCw } from "lucide-react";
+import { signOutAndReset } from "@/lib/signOut";
 
 export default function AwaitingApproval() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [checking, setChecking] = useState(false);
 
-  useEffect(() => {
+  const checkApproval = async () => {
     if (!user) return;
-
-    const checkApproval = async () => {
-      const { data } = await supabase
+    setChecking(true);
+    try {
+      // Check persons (supported person link)
+      const { data: personData } = await supabase
         .from("persons")
         .select("id")
         .eq("user_id", user.id)
         .limit(1);
 
-      if (data && data.length > 0) {
-        // Approved — stop polling and navigate
+      if (personData && personData.length > 0) {
         if (intervalRef.current) clearInterval(intervalRef.current);
-        navigate("/", { replace: true });
+        navigate("/person-portal", { replace: true });
+        return;
       }
-    };
 
-    // Check immediately, then every 3 seconds
+      // Check group memberships
+      const { data: memberData } = await supabase
+        .from("group_memberships")
+        .select("group_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .limit(1);
+
+      if (memberData && memberData.length > 0) {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        navigate(`/group/${memberData[0].group_id}`, { replace: true });
+        return;
+      }
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+
     checkApproval();
     intervalRef.current = setInterval(checkApproval, 3000);
 
@@ -50,12 +71,15 @@ export default function AwaitingApproval() {
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
             <Clock className="h-6 w-6 text-muted-foreground" />
           </div>
-          <CardTitle className="text-xl">Awaiting Approval</CardTitle>
+          <CardTitle className="text-xl">Awaiting Access</CardTitle>
           <CardDescription>
-            Your access request has been received. A coordinator must approve you before access is granted.
+            Your account is set up. A coordinator must add you to a group before you can proceed. This page will update automatically.
           </CardDescription>
         </CardHeader>
-        <CardContent className="text-center">
+        <CardContent className="flex flex-col items-center gap-3">
+          <Button variant="outline" size="sm" onClick={checkApproval} disabled={checking}>
+            <RefreshCw className={`mr-1 h-4 w-4 ${checking ? "animate-spin" : ""}`} /> Refresh
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => signOutAndReset()}>
             <LogOut className="mr-1 h-4 w-4" /> Sign Out
           </Button>

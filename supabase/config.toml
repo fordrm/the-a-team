@@ -1,1 +1,4 @@
 project_id = "bitbhawgxvdpxffnqarv"
+
+[functions.invite-to-group]
+verify_jwt = false
