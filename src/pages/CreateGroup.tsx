@@ -27,14 +27,28 @@ export default function CreateGroup() {
         return;
       }
       const currentUserId = userData.user.id;
+      console.log("CreateGroup:getUser id", currentUserId);
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionUserId = sessionData?.session?.user?.id ?? null;
+      console.log("CreateGroup:getSession user id", sessionUserId);
+
+      const { data: me, error: meErr } = await supabase.rpc("whoami");
+      console.log("CreateGroup:whoami()", me, meErr?.message);
+
+      const insertPayload = { name: name.trim(), created_by_user_id: currentUserId };
+      console.log("CreateGroup:insert payload", insertPayload);
 
       // Insert group
       const { data: group, error: groupErr } = await supabase
         .from("groups")
-        .insert({ name: name.trim(), created_by_user_id: currentUserId })
+        .insert(insertPayload)
         .select("id")
         .single();
-      if (groupErr) throw groupErr;
+      if (groupErr) {
+        console.error("CreateGroup:insert error", groupErr);
+        throw groupErr;
+      }
 
       // Insert creator membership
       const { error: memErr } = await supabase
