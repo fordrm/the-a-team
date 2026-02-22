@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDate } from "@/lib/formatDate";
 import { supabase } from "@/integrations/supabase/client";
 import { createAlertIfNeeded } from "@/lib/alertsService";
 import { useAuth } from "@/lib/auth";
@@ -287,7 +288,7 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
                   <div key={v.id} className="rounded-md border p-3 space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium">v{v.version_num}</span>
-                      <span className="text-xs text-muted-foreground">{new Date(v.created_at).toLocaleDateString()}</span>
+                      <span className="text-xs text-muted-foreground">{formatDate(v.created_at)}</span>
                     </div>
                     {vActiveFields.map(({ label, key }) => (
                       <div key={key}>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDateTime } from "@/lib/formatDate";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -148,7 +149,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                           {visibilityIcon(n.visibility_tier)}
                           {visibilityLabel(n.visibility_tier)}
                         </span>
-                        <span>{new Date(n.occurred_at).toLocaleString()}</span>
+                        <span>{formatDateTime(n.occurred_at)}</span>
                       </div>
                     </div>
                     <p className="text-sm">{n.body}</p>
@@ -178,7 +179,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge className="text-xs">{i.status}</Badge>
-                        <span>{new Date(item.date).toLocaleString()}</span>
+                        <span>{formatDateTime(item.date)}</span>
                       </div>
                     </div>
                     <p className="text-sm font-medium">{i.title}</p>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDateTime } from "@/lib/formatDate";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -108,9 +109,9 @@ export default function AlertDetail({ alertId, groupId, isCoordinator, onBack, o
         {item.body && <p className="text-sm">{item.body}</p>}
 
         <div className="text-xs text-muted-foreground">
-          Created: {new Date(item.created_at).toLocaleString()}
-          {item.acknowledged_at && <span className="ml-3">Acknowledged: {new Date(item.acknowledged_at).toLocaleString()}</span>}
-          {item.resolved_at && <span className="ml-3">Resolved: {new Date(item.resolved_at).toLocaleString()}</span>}
+          Created: {formatDateTime(item.created_at)}
+          {item.acknowledged_at && <span className="ml-3">Acknowledged: {formatDateTime(item.acknowledged_at)}</span>}
+          {item.resolved_at && <span className="ml-3">Resolved: {formatDateTime(item.resolved_at)}</span>}
         </div>
 
         {item.resolution_note && (

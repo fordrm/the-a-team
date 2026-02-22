@@ -234,6 +234,47 @@ export type Database = {
           },
         ]
       }
+      audit_log: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          event_type: string
+          group_id: string | null
+          id: string
+          metadata: Json | null
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          event_type: string
+          group_id?: string | null
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          event_type?: string
+          group_id?: string | null
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_notes: {
         Row: {
           author_user_id: string
@@ -764,6 +805,17 @@ export type Database = {
         Returns: string
       }
       whoami: { Args: never; Returns: string }
+      write_audit_log: {
+        Args: {
+          p_actor_user_id: string
+          p_event_type: string
+          p_group_id: string
+          p_metadata?: Json
+          p_target_id?: string
+          p_target_type?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

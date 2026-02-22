@@ -10,21 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
+import { INDICATOR_KEYS } from "@/lib/indicatorKeys";
 
 const CHANNELS = ["call", "text", "in-person", "video", "other"] as const;
 const VISIBILITY_TIERS = [
   { value: "shared_with_person", label: "Shared with person" },
   { value: "supporters_only", label: "Supporters only" },
   { value: "restricted", label: "Restricted (coordinators)" },
-] as const;
-
-const INDICATOR_KEYS = [
-  { key: "triangulation_claim_unlogged_agreement", label: "Triangulation: claim of unlogged agreement" },
-  { key: "triangulation_pressure_secret", label: "Triangulation: pressure to keep secret" },
-  { key: "conflict_tone_high", label: "Conflict tone high" },
-  { key: "suspiciousness_high", label: "Suspiciousness high" },
-  { key: "sleep_reduced", label: "Sleep reduced" },
-  { key: "disorganization_high", label: "Disorganization high" },
 ] as const;
 
 interface Props {

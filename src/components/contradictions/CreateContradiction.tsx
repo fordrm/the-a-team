@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDateTime } from "@/lib/formatDate";
 import { supabase } from "@/integrations/supabase/client";
 import { createAlertIfNeeded } from "@/lib/alertsService";
 import { useAuth } from "@/lib/auth";
@@ -183,7 +184,7 @@ export default function CreateContradiction({ groupId, personId, onBack, onCreat
                   <label key={n.id} className="flex items-start gap-2 text-sm cursor-pointer hover:bg-muted rounded p-1">
                     <Checkbox checked={selectedNoteIds.includes(n.id)} onCheckedChange={() => toggleNote(n.id)} className="mt-0.5" />
                     <div>
-                      <span className="text-xs text-muted-foreground">{new Date(n.occurred_at).toLocaleString()}</span>
+                      <span className="text-xs text-muted-foreground">{formatDateTime(n.occurred_at)}</span>
                       <p className="line-clamp-1">{n.body}</p>
                     </div>
                   </label>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDateTime } from "@/lib/formatDate";
 import { supabase } from "@/integrations/supabase/client";
 import { createAlertIfNeeded } from "@/lib/alertsService";
 import { useAuth } from "@/lib/auth";
@@ -158,9 +159,9 @@ export default function InterventionDetail({ interventionId, groupId, isCoordina
         )}
 
         <div className="flex gap-4 text-xs text-muted-foreground">
-          {item.start_at && <span>Start: {new Date(item.start_at).toLocaleString()}</span>}
-          {item.end_at && <span>End: {new Date(item.end_at).toLocaleString()}</span>}
-          <span>Created: {new Date(item.created_at).toLocaleString()}</span>
+          {item.start_at && <span>Start: {formatDateTime(item.start_at)}</span>}
+          {item.end_at && <span>End: {formatDateTime(item.end_at)}</span>}
+          <span>Created: {formatDateTime(item.created_at)}</span>
         </div>
 
         {/* Coordinator: update status */}
@@ -190,7 +191,7 @@ export default function InterventionDetail({ interventionId, groupId, isCoordina
                 {details.map(d => (
                   <li key={d.id} className="rounded-md border p-2 text-sm space-y-1">
                     <p>{d.body}</p>
-                    <span className="text-xs text-muted-foreground">{new Date(d.created_at).toLocaleString()}</span>
+                    <span className="text-xs text-muted-foreground">{formatDateTime(d.created_at)}</span>
                   </li>
                 ))}
               </ul>
