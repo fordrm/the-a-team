@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { resetAppState } from "@/lib/resetAppState";
 
 interface AuthContextType {
   session: Session | null;
@@ -13,15 +14,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const LOCAL_KEYS = ["activeGroupId", "selectedGroupId", "activePersonId", "selectedPersonId", "groupContext"];
-
-function clearAppState() {
-  for (const key of LOCAL_KEYS) {
-    try { localStorage.removeItem(key); } catch (_) {}
-    try { sessionStorage.removeItem(key); } catch (_) {}
-  }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -29,13 +21,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      (_event, newSession) => {
+        console.log("Auth state change:", _event, newSession?.user?.id ?? "no user");
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
         setLoading(false);
-        if (!session) {
-          clearAppState();
-          // Navigate to auth - use window.location to work outside Router context
+        if (!newSession) {
+          resetAppState();
           if (window.location.pathname !== "/auth") {
             window.location.replace("/auth");
           }
@@ -43,9 +35,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      setUser(s?.user ?? null);
       setLoading(false);
     });
 

@@ -139,7 +139,7 @@ export default function PersonPortal() {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Button variant="ghost" size="sm" onClick={() => signOutAndReset(navigate)}>
+            <Button variant="ghost" size="sm" onClick={() => signOutAndReset()}>
               <LogOut className="mr-1 h-4 w-4" /> Sign Out
             </Button>
           </CardContent>
@@ -158,7 +158,7 @@ export default function PersonPortal() {
               {personInfo.label} — {personInfo.group_name}
             </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => signOutAndReset(navigate)}>
+          <Button variant="ghost" size="sm" onClick={() => signOutAndReset()}>
             <LogOut className="mr-1 h-4 w-4" /> Sign Out
           </Button>
         </div>

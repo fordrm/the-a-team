@@ -54,7 +54,7 @@ export default function CreateGroup() {
             </Button>
           </form>
           <div className="mt-6 text-center">
-            <button type="button" onClick={() => signOutAndReset(navigate)} className="text-sm text-muted-foreground hover:underline">Sign Out</button>
+            <button type="button" onClick={() => signOutAndReset()} className="text-sm text-muted-foreground hover:underline">Sign Out</button>
           </div>
         </CardContent>
       </Card>
