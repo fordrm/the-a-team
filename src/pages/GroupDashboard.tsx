@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle, Activity, Bell } from "lucide-react";
+import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle, Activity, Bell, Pencil } from "lucide-react";
 import Timeline from "@/components/timeline/Timeline";
 import AddNote from "@/components/timeline/AddNote";
 import AgreementsList from "@/components/agreements/AgreementsList";
@@ -69,6 +69,12 @@ export default function GroupDashboard() {
   const [personUserId, setPersonUserId] = useState("");
   const [personOpen, setPersonOpen] = useState(false);
   const [creatingPerson, setCreatingPerson] = useState(false);
+
+  // edit display name
+  const [editNameOpen, setEditNameOpen] = useState(false);
+  const [editNameMemberId, setEditNameMemberId] = useState<string | null>(null);
+  const [editNameValue, setEditNameValue] = useState("");
+  const [savingName, setSavingName] = useState(false);
 
   const fetchData = async () => {
     if (!groupId) return;
@@ -215,16 +221,66 @@ export default function GroupDashboard() {
                   <p className="text-sm text-muted-foreground">No members yet.</p>
                 ) : (
                   <ul className="space-y-2">
-                    {members.map(m => (
-                      <li key={m.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                        <span className="font-medium">{m.display_name || m.user_id.slice(0, 8) + "…"}</span>
-                        <span className="rounded bg-accent px-2 py-0.5 text-xs text-accent-foreground">{m.role}</span>
-                      </li>
-                    ))}
+                    {members.map(m => {
+                      const displayName = m.display_name || `Member (${m.user_id.slice(-6)})`;
+                      const isSelf = m.user_id === user?.id;
+                      const canEdit = isSelf || (isCoordinator && !m.display_name);
+                      return (
+                        <li key={m.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{displayName}</span>
+                            {canEdit && (
+                              <button
+                                type="button"
+                                className="text-muted-foreground hover:text-primary"
+                                onClick={() => { setEditNameMemberId(m.id); setEditNameValue(m.display_name || ""); setEditNameOpen(true); }}
+                                title={isSelf ? "Edit my name" : "Set name"}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                          <span className="rounded bg-accent px-2 py-0.5 text-xs text-accent-foreground">{m.role}</span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </CardContent>
             </Card>
+
+            {/* Edit Display Name Dialog */}
+            <Dialog open={editNameOpen} onOpenChange={setEditNameOpen}>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Edit Display Name</DialogTitle></DialogHeader>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!editNameMemberId) return;
+                  setSavingName(true);
+                  try {
+                    const { error } = await supabase
+                      .from("group_memberships")
+                      .update({ display_name: editNameValue.trim() || null })
+                      .eq("id", editNameMemberId);
+                    if (error) throw error;
+                    toast({ title: "Name updated" });
+                    setEditNameOpen(false);
+                    fetchData();
+                  } catch (err: any) {
+                    toast({ title: "Error", description: err.message, variant: "destructive" });
+                  } finally { setSavingName(false); }
+                }} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Display Name</Label>
+                    <Input value={editNameValue} onChange={e => setEditNameValue(e.target.value)} placeholder="Enter a display name" />
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button type="button" variant="outline" onClick={() => setEditNameOpen(false)}>Cancel</Button>
+                    <Button type="submit" disabled={savingName}>{savingName ? "Saving…" : "Save"}</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
           )}
 
