@@ -8,7 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Clock, Plus, ChevronDown, Eye, EyeOff, Shield, Activity, Pin } from "lucide-react";
-import { INDICATOR_LABEL_MAP } from "@/lib/indicators";
+import { INDICATOR_LABEL_MAP, ALL_INDICATORS } from "@/lib/indicators";
 
 interface NoteRow {
   id: string;
@@ -307,9 +307,14 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                               <ChevronDown className="h-3 w-3" /> Indicators ({indicatorKeys.length})
                             </CollapsibleTrigger>
                             <CollapsibleContent className="mt-1 flex flex-wrap gap-1">
-                              {indicatorKeys.map(k => (
-                                <Badge key={k} variant="secondary" className="text-xs">{k}</Badge>
-                              ))}
+                              {indicatorKeys.map(k => {
+                                const def = ALL_INDICATORS.find(i => i.label === k || i.key === k);
+                                return (
+                                  <Badge key={k} variant="secondary" className="text-xs cursor-help" title={def?.tip || ""}>
+                                    {k}
+                                  </Badge>
+                                );
+                              })}
                             </CollapsibleContent>
                           </Collapsible>
                         </div>

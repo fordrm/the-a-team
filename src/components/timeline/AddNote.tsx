@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, ChevronRight, ChevronDown, Search } from "lucide-react";
+import { ArrowLeft, ChevronRight, ChevronDown, Search, HelpCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { INDICATOR_CATEGORIES } from "@/lib/indicators";
 
 const CHANNELS = ["call", "text", "in-person", "video", "other"] as const;
@@ -196,9 +197,25 @@ export default function AddNote({ groupId, personId, onBack, onCreated }: Props)
 
                     {isExpanded && (
                       <div className="border-t px-3 pb-2 pt-1 space-y-1">
-                        {filteredIndicators.map(({ key, label }) => (
+                        {filteredIndicators.map(({ key, label, tip }) => (
                           <div key={key} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-muted/30">
-                            <span className="text-sm">{label}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm">{label}</span>
+                              {tip && (
+                                <TooltipProvider delayDuration={200}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="text-muted-foreground cursor-help">
+                                        <HelpCircle className="h-3.5 w-3.5" />
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs text-sm">
+                                      {tip}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
                             <Switch
                               checked={!!indicators[key]}
                               onCheckedChange={() => toggleIndicator(key)}
