@@ -6,6 +6,8 @@ export default {
     'bg-purple-400', 'bg-orange-400', 'bg-blue-400', 'bg-amber-400', 'bg-red-400',
     'text-purple-500', 'text-orange-500', 'text-blue-500', 'text-amber-600', 'text-red-500',
     'bg-purple-100', 'bg-orange-100', 'bg-blue-100', 'bg-amber-100', 'bg-red-100',
+    'text-purple-700', 'text-orange-700', 'text-blue-700', 'text-amber-700', 'text-red-700',
+    'border-purple-200', 'border-orange-200', 'border-blue-200', 'border-amber-200', 'border-red-200',
   ],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",

@@ -8,7 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Clock, Plus, ChevronDown, Eye, EyeOff, Shield, Activity, Pin, FileText, Check, Pencil, X, XCircle } from "lucide-react";
-import { INDICATOR_LABEL_MAP, ALL_INDICATORS } from "@/lib/indicators";
+import { INDICATOR_LABEL_MAP, ALL_INDICATORS, getIndicatorBadgeColor } from "@/lib/indicators";
 
 interface NoteRow {
   id: string;
@@ -111,12 +111,18 @@ const AGREEMENT_STATUS_CONFIG: Record<string, { icon: React.ReactNode; label: st
 export default function Timeline({ groupId, personId, members, onAddNote, isGroupMember = true }: Props) {
   const [items, setItems] = useState<TimelineItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [personName, setPersonName] = useState<string | null>(null);
+  const [personUserId, setPersonUserId] = useState<string | null>(null);
 
   // Filters
   const [filterChannel, setFilterChannel] = useState("all");
   const [filterVisibility, setFilterVisibility] = useState("all");
   const [filterHasIndicators, setFilterHasIndicators] = useState(false);
   const [filterType, setFilterType] = useState("all");
+
+  // Pagination
+  const PAGE_SIZE = 20;
+  const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
 
   useEffect(() => {
     if (!personId) { setItems([]); setLoading(false); return; }
@@ -205,6 +211,19 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
         } as AgreementEventRow,
       }));
 
+      // Fetch supported person's display name for agreement events
+      if (personId) {
+        const { data: personData } = await supabase
+          .from("persons")
+          .select("label, user_id")
+          .eq("id", personId)
+          .maybeSingle();
+        if (personData) {
+          setPersonName(personData.label);
+          setPersonUserId(personData.user_id);
+        }
+      }
+
       setItems(sortItems([...noteItems, ...intItems, ...acceptanceItems, ...creationItems]));
       setLoading(false);
     };
@@ -231,9 +250,20 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
     });
   }, [items, filterChannel, filterVisibility, filterHasIndicators, filterType]);
 
+  const visibleItems = useMemo(() => {
+    return filteredItems.slice(0, displayCount);
+  }, [filteredItems, displayCount]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setDisplayCount(PAGE_SIZE);
+  }, [filterChannel, filterVisibility, filterHasIndicators, filterType]);
+
   const authorName = (uid: string) => {
     const m = members.find(m => m.user_id === uid);
-    return m?.display_name || uid.slice(0, 8) + "…";
+    if (m?.display_name) return m.display_name;
+    if (personUserId && uid === personUserId && personName) return personName;
+    return uid.slice(0, 8) + "…";
   };
 
   const togglePin = async (noteId: string, currentlyPinned: boolean) => {
@@ -334,7 +364,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
         ) : (
           <TooltipProvider>
             <ul className="space-y-3">
-              {filteredItems.map(item => {
+              {visibleItems.map(item => {
                 if (item.kind === "note") {
                   const n = item.data;
                   const indicatorKeys = Object.entries(n.indicators || {})
@@ -386,8 +416,9 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                             <CollapsibleContent className="mt-1 flex flex-wrap gap-1">
                               {indicatorKeys.map(k => {
                                 const def = ALL_INDICATORS.find(i => i.label === k || i.key === k);
+                                const colorClasses = getIndicatorBadgeColor(def?.key || k);
                                 return (
-                                  <Badge key={k} variant="secondary" className="text-xs cursor-help" title={def?.tip || ""}>
+                                  <Badge key={k} variant="outline" className={`text-xs cursor-help ${colorClasses}`} title={def?.tip || ""}>
                                     {k}
                                   </Badge>
                                 );
@@ -448,6 +479,18 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
               })}
             </ul>
           </TooltipProvider>
+        )}
+
+        {filteredItems.length > displayCount && (
+          <div className="flex justify-center pt-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDisplayCount(prev => prev + PAGE_SIZE)}
+            >
+              Show more ({filteredItems.length - displayCount} remaining)
+            </Button>
+          </div>
         )}
       </CardContent>
 
