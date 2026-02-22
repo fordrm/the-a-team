@@ -51,6 +51,11 @@ export default function Auth() {
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+              {!isSignUp && (
+                <a href="/reset-password" className="text-xs text-muted-foreground hover:text-primary hover:underline underline-offset-4">
+                  Forgot password?
+                </a>
+              )}
             </div>
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? "Please wait…" : isSignUp ? "Sign Up" : "Sign In"}

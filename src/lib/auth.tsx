@@ -27,8 +27,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(newSession?.user ?? null);
         setLoading(false);
         if (!newSession) {
+          const path = window.location.pathname;
+          const publicPaths = ["/auth", "/reset-password", "/update-password"];
           resetAppState();
-          if (window.location.pathname !== "/auth") {
+          if (!publicPaths.includes(path)) {
             window.location.replace("/auth");
           }
         }
