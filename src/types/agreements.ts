@@ -114,3 +114,32 @@ export function computeFieldDiffs(
 
   return diffs;
 }
+
+// ─── Status & Closure Types ─────────────────────────────
+export type AgreementStatus =
+  | "proposed"
+  | "accepted"
+  | "declined"
+  | "withdrawn"
+  | "review_needed"
+  | "completed"
+  | "incomplete"
+  | "lapsed";
+
+export interface ClosureData {
+  outcome: string;
+  compliance_estimate?: number;
+  person_assessment?: string;
+  reflection?: string;
+  early_close?: boolean;
+  days_active?: number;
+  days_planned?: number;
+  renewed_as?: string;
+}
+
+export const PERSON_ASSESSMENT_OPTIONS = [
+  { value: "on_track", label: "On track", emoji: "✅" },
+  { value: "struggling", label: "Struggling", emoji: "😓" },
+  { value: "needs_change", label: "Needs change", emoji: "🔄" },
+  { value: "not_working", label: "Not working", emoji: "❌" },
+] as const;
