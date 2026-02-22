@@ -9,12 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, UserPlus, Heart, LogOut, Clock } from "lucide-react";
+import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle } from "lucide-react";
 import Timeline from "@/components/timeline/Timeline";
 import AddNote from "@/components/timeline/AddNote";
 import AgreementsList from "@/components/agreements/AgreementsList";
 import CreateAgreement from "@/components/agreements/CreateAgreement";
 import AgreementDetail from "@/components/agreements/AgreementDetail";
+import ContradictionsList from "@/components/contradictions/ContradictionsList";
+import CreateContradiction from "@/components/contradictions/CreateContradiction";
+import ContradictionDetail from "@/components/contradictions/ContradictionDetail";
 
 interface GroupRow { id: string; name: string; }
 interface MemberRow { id: string; user_id: string; role: string; display_name: string | null; is_active: boolean; }
@@ -22,6 +25,7 @@ interface PersonRow { id: string; label: string; is_primary: boolean; user_id: s
 
 type AgreementView = { type: "list" } | { type: "create" } | { type: "detail"; agreementId: string };
 type TimelineView = { type: "list" } | { type: "add" };
+type ContradictionView = { type: "list" } | { type: "create" } | { type: "detail"; id: string };
 
 export default function GroupDashboard() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -37,6 +41,8 @@ export default function GroupDashboard() {
   const [agreementView, setAgreementView] = useState<AgreementView>({ type: "list" });
   const [timelineView, setTimelineView] = useState<TimelineView>({ type: "list" });
   const [timelineKey, setTimelineKey] = useState(0);
+  const [contradictionView, setContradictionView] = useState<ContradictionView>({ type: "list" });
+  const [contradictionKey, setContradictionKey] = useState(0);
 
   // invite form
   const [inviteUserId, setInviteUserId] = useState("");
@@ -106,6 +112,10 @@ export default function GroupDashboard() {
     } finally { setCreatingPerson(false); }
   };
 
+  // Derived: is current user the supported person for active person? Is coordinator?
+  const isSubjectPerson = activePersonId ? persons.find(p => p.id === activePersonId)?.user_id === user?.id : false;
+  const isCoordinator = members.some(m => m.user_id === user?.id && m.role === "coordinator");
+
   if (loading) return <div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Loading…</p></div>;
 
   return (
@@ -128,6 +138,7 @@ export default function GroupDashboard() {
             <TabsTrigger value="persons" className="flex-1">Persons</TabsTrigger>
             <TabsTrigger value="agreements" className="flex-1">Agreements</TabsTrigger>
             <TabsTrigger value="timeline" className="flex-1">Timeline</TabsTrigger>
+            {!isSubjectPerson && <TabsTrigger value="contradictions" className="flex-1">Conflicts</TabsTrigger>}
           </TabsList>
 
           {/* Members Tab */}
@@ -260,6 +271,37 @@ export default function GroupDashboard() {
               />
             )}
           </TabsContent>
+
+          {/* Contradictions Tab */}
+          {!isSubjectPerson && (
+            <TabsContent value="contradictions">
+              {contradictionView.type === "list" && (
+                <ContradictionsList
+                  key={contradictionKey}
+                  groupId={groupId!}
+                  personId={activePersonId}
+                  onCreateNew={() => setContradictionView({ type: "create" })}
+                  onView={(id) => setContradictionView({ type: "detail", id })}
+                />
+              )}
+              {contradictionView.type === "create" && activePersonId && (
+                <CreateContradiction
+                  groupId={groupId!}
+                  personId={activePersonId}
+                  onBack={() => setContradictionView({ type: "list" })}
+                  onCreated={() => { setContradictionView({ type: "list" }); setContradictionKey(k => k + 1); }}
+                />
+              )}
+              {contradictionView.type === "detail" && (
+                <ContradictionDetail
+                  contradictionId={contradictionView.id}
+                  groupId={groupId!}
+                  isCoordinator={isCoordinator}
+                  onBack={() => setContradictionView({ type: "list" })}
+                />
+              )}
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
