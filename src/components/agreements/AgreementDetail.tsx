@@ -106,6 +106,7 @@ export default function AgreementDetail({
   const [versions, setVersions] = useState<any[]>([]);
   const [acceptances, setAcceptances] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
+  const [personRecord, setPersonRecord] = useState<{user_id: string; label: string} | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubjectPerson, setIsSubjectPerson] = useState(false);
   const [isCoordinator, setIsCoordinator] = useState(false);
@@ -146,9 +147,10 @@ export default function AgreementDetail({
       if (agRes.data && user) {
         const { data: person } = await supabase
           .from("persons")
-          .select("user_id")
+          .select("user_id, label")
           .eq("id", agRes.data.subject_person_id)
           .single();
+        if (person) setPersonRecord(person);
         setIsSubjectPerson(person?.user_id === user.id);
 
         const mem = (memRes.data || []).find(
@@ -188,26 +190,13 @@ export default function AgreementDetail({
     if (!user || !latestVersion || !agreement) return;
     setSubmitting(true);
     try {
-      const perms = await checkPermission(user.id, groupId, agreement.subject_person_id);
-      if (!perms.isSubjectPerson && !perms.isMember) {
-        toast({ title: "Permission denied", variant: "destructive" });
-        return;
-      }
-      const { error } = await supabase.from("agreement_acceptances").insert({
-        agreement_version_id: latestVersion.id,
-        agreement_id: agreementId,
-        group_id: groupId,
-        person_user_id: user.id,
-        status: "accepted",
+      const { error } = await supabase.rpc("respond_to_agreement", {
+        p_agreement_id: agreementId,
+        p_version_id: latestVersion.id,
+        p_group_id: groupId,
+        p_response: "accepted",
       });
       if (error) throw error;
-
-      if (isSubjectPerson || isCoordinator) {
-        await supabase
-          .from("agreements")
-          .update({ current_version_id: latestVersion.id, status: "accepted" })
-          .eq("id", agreementId);
-      }
 
       toast({ title: "Agreement accepted" });
       fetchAll();
@@ -222,40 +211,23 @@ export default function AgreementDetail({
     if (!user || !latestVersion || !agreement) return;
     setSubmitting(true);
     try {
-      const perms = await checkPermission(user.id, groupId, agreement.subject_person_id);
-      if (!perms.isSubjectPerson && !perms.isMember) {
-        toast({ title: "Permission denied", variant: "destructive" });
-        return;
-      }
-      const { data: acc, error } = await supabase
-        .from("agreement_acceptances")
-        .insert({
-          agreement_version_id: latestVersion.id,
-          agreement_id: agreementId,
-          group_id: groupId,
-          person_user_id: user.id,
-          status: "declined",
-        })
-        .select("id")
-        .single();
+      const { error } = await supabase.rpc("respond_to_agreement", {
+        p_agreement_id: agreementId,
+        p_version_id: latestVersion.id,
+        p_group_id: groupId,
+        p_response: "declined",
+      });
       if (error) throw error;
 
-      await supabase
-        .from("agreements")
-        .update({ status: "declined" })
-        .eq("id", agreementId);
-
-      if (acc) {
-        await createAlertIfNeeded({
-          group_id: groupId,
-          subject_person_id: agreement.subject_person_id,
-          type: "agreement_declined",
-          severity: "tier2",
-          title: `Agreement declined: ${fields.title || "Untitled"}`,
-          source_table: "agreement_acceptances",
-          source_id: acc.id,
-        });
-      }
+      await createAlertIfNeeded({
+        group_id: groupId,
+        subject_person_id: agreement.subject_person_id,
+        type: "agreement_declined",
+        severity: "tier2",
+        title: `Agreement declined: ${fields.title || "Untitled"}`,
+        source_table: "agreement_acceptances",
+        source_id: agreementId,
+      });
 
       toast({ title: "Agreement declined" });
       fetchAll();
@@ -368,7 +340,9 @@ export default function AgreementDetail({
   // ─── Helpers ──────────────────────────────────────────
   function memberName(userId: string): string {
     const m = members.find((m: any) => m.user_id === userId);
-    return m?.display_name || "Team member";
+    if (m?.display_name) return m.display_name;
+    if (personRecord && personRecord.user_id === userId) return personRecord.label;
+    return "Team member";
   }
 
   function startModify(prefill?: VersionFields) {
@@ -622,17 +596,26 @@ export default function AgreementDetail({
             </Card>
           )}
 
-          {/* Coordinator: Withdraw */}
+          {/* Coordinator: Accept or Withdraw proposed */}
           {isCoordinator && !isSubjectPerson && status === "proposed" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-destructive"
-              onClick={handleWithdraw}
-              disabled={submitting}
-            >
-              <X className="mr-1 h-4 w-4" /> Withdraw Agreement
-            </Button>
+            <div className="space-y-2">
+              <Button
+                size="sm"
+                onClick={handleAccept}
+                disabled={submitting}
+              >
+                <CheckCircle className="mr-1.5 h-4 w-4" /> Accept as Active
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-destructive"
+                onClick={handleWithdraw}
+                disabled={submitting}
+              >
+                <X className="mr-1 h-4 w-4" /> Withdraw Agreement
+              </Button>
+            </div>
           )}
         </div>
       )}
