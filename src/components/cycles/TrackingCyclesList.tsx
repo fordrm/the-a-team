@@ -66,6 +66,8 @@ export default function TrackingCyclesList({ groupId, personId, personLabel, isC
   const [closeOpen, setCloseOpen] = useState(false);
   const [closeReflection, setCloseReflection] = useState("");
 
+  const [activityCounts, setActivityCounts] = useState<Record<string, { notes: number; agreements: number; interventions: number }>>({});
+
   const fetchCycles = async () => {
     if (!personId) { setCycles([]); setLoading(false); return; }
     const { data, error } = await supabase
@@ -77,7 +79,24 @@ export default function TrackingCyclesList({ groupId, personId, personLabel, isC
     if (error) {
       toast({ title: "Error loading cycles", description: error.message, variant: "destructive" });
     }
-    setCycles(data || []);
+    const fetchedCycles = data || [];
+    setCycles(fetchedCycles);
+
+    if (fetchedCycles.length > 0) {
+      const cycleIds = fetchedCycles.map(c => c.id);
+      const [notesRes, agreementsRes, interventionsRes] = await Promise.all([
+        supabase.from("contact_notes").select("cycle_id").in("cycle_id", cycleIds),
+        supabase.from("agreements").select("cycle_id").in("cycle_id", cycleIds),
+        supabase.from("interventions").select("cycle_id").in("cycle_id", cycleIds),
+      ]);
+      const counts: Record<string, { notes: number; agreements: number; interventions: number }> = {};
+      cycleIds.forEach(id => { counts[id] = { notes: 0, agreements: 0, interventions: 0 }; });
+      (notesRes.data || []).forEach((r: any) => { if (r.cycle_id && counts[r.cycle_id]) counts[r.cycle_id].notes++; });
+      (agreementsRes.data || []).forEach((r: any) => { if (r.cycle_id && counts[r.cycle_id]) counts[r.cycle_id].agreements++; });
+      (interventionsRes.data || []).forEach((r: any) => { if (r.cycle_id && counts[r.cycle_id]) counts[r.cycle_id].interventions++; });
+      setActivityCounts(counts);
+    }
+
     setLoading(false);
   };
 
@@ -336,6 +355,15 @@ export default function TrackingCyclesList({ groupId, personId, personLabel, isC
                         {c.reason && (
                           <p className="text-xs text-muted-foreground italic">{c.reason}</p>
                         )}
+                        {activityCounts[c.id] && (activityCounts[c.id].notes > 0 || activityCounts[c.id].agreements > 0 || activityCounts[c.id].interventions > 0) && (
+                          <p className="text-xs text-muted-foreground">
+                            {[
+                              activityCounts[c.id].notes > 0 ? `${activityCounts[c.id].notes} note${activityCounts[c.id].notes !== 1 ? "s" : ""}` : null,
+                              activityCounts[c.id].agreements > 0 ? `${activityCounts[c.id].agreements} agreement${activityCounts[c.id].agreements !== 1 ? "s" : ""}` : null,
+                              activityCounts[c.id].interventions > 0 ? `${activityCounts[c.id].interventions} intervention${activityCounts[c.id].interventions !== 1 ? "s" : ""}` : null,
+                            ].filter(Boolean).join(" · ")}
+                          </p>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -367,6 +395,15 @@ export default function TrackingCyclesList({ groupId, personId, personLabel, isC
                         </p>
                         {c.closure?.reflection && (
                           <p className="text-xs text-muted-foreground italic border-l-2 pl-2 mt-1">{c.closure.reflection}</p>
+                        )}
+                        {activityCounts[c.id] && (activityCounts[c.id].notes > 0 || activityCounts[c.id].agreements > 0 || activityCounts[c.id].interventions > 0) && (
+                          <p className="text-xs text-muted-foreground">
+                            {[
+                              activityCounts[c.id].notes > 0 ? `${activityCounts[c.id].notes} note${activityCounts[c.id].notes !== 1 ? "s" : ""}` : null,
+                              activityCounts[c.id].agreements > 0 ? `${activityCounts[c.id].agreements} agreement${activityCounts[c.id].agreements !== 1 ? "s" : ""}` : null,
+                              activityCounts[c.id].interventions > 0 ? `${activityCounts[c.id].interventions} intervention${activityCounts[c.id].interventions !== 1 ? "s" : ""}` : null,
+                            ].filter(Boolean).join(" · ")}
+                          </p>
                         )}
                       </li>
                     ))}

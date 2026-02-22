@@ -156,6 +156,13 @@ export type Database = {
             foreignKeyName: "agreements_cycle_id_fkey"
             columns: ["cycle_id"]
             isOneToOne: false
+            referencedRelation: "cycle_activity_counts"
+            referencedColumns: ["cycle_id"]
+          },
+          {
+            foreignKeyName: "agreements_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
             referencedRelation: "tracking_cycles"
             referencedColumns: ["id"]
           },
@@ -345,6 +352,13 @@ export type Database = {
           visibility_tier?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contact_notes_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "cycle_activity_counts"
+            referencedColumns: ["cycle_id"]
+          },
           {
             foreignKeyName: "contact_notes_cycle_id_fkey"
             columns: ["cycle_id"]
@@ -643,6 +657,13 @@ export type Database = {
             foreignKeyName: "interventions_cycle_id_fkey"
             columns: ["cycle_id"]
             isOneToOne: false
+            referencedRelation: "cycle_activity_counts"
+            referencedColumns: ["cycle_id"]
+          },
+          {
+            foreignKeyName: "interventions_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
             referencedRelation: "tracking_cycles"
             referencedColumns: ["id"]
           },
@@ -854,7 +875,34 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      cycle_activity_counts: {
+        Row: {
+          agreement_count: number | null
+          cycle_id: string | null
+          group_id: string | null
+          intervention_count: number | null
+          label: string | null
+          note_count: number | null
+          person_id: string | null
+          status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_cycles_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_cycles_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       approve_supported_person: {
