@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Check, Pencil, ChevronDown, History } from "lucide-react";
+import { checkPermission } from "@/lib/checkPermission";
 
 interface VersionFields {
   title?: string;
@@ -99,6 +100,12 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
     if (!user || !latestVersion) return;
     setSubmitting(true);
     try {
+      const perms = await checkPermission(user.id, groupId, agreement?.subject_person_id);
+      if (!perms.isSubjectPerson && !perms.isMember) {
+        toast({ title: "Permission denied", description: "Your access may have changed. Please refresh.", variant: "destructive" });
+        setSubmitting(false);
+        return;
+      }
       const { error } = await supabase.from("agreement_acceptances").insert({
         agreement_version_id: latestVersion.id,
         agreement_id: agreementId,
@@ -128,6 +135,12 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
     if (!user || !latestVersion || !agreement) return;
     setSubmitting(true);
     try {
+      const perms = await checkPermission(user.id, groupId, agreement?.subject_person_id);
+      if (!perms.isSubjectPerson && !perms.isMember) {
+        toast({ title: "Permission denied", description: "Your access may have changed. Please refresh.", variant: "destructive" });
+        setSubmitting(false);
+        return;
+      }
       const { data: acc, error } = await supabase.from("agreement_acceptances").insert({
         agreement_version_id: latestVersion.id,
         agreement_id: agreementId,
@@ -161,6 +174,12 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
     if (!user || !latestVersion || !agreement) return;
     setSubmitting(true);
     try {
+      const perms = await checkPermission(user.id, groupId, agreement?.subject_person_id);
+      if (!perms.isSubjectPerson && !perms.isMember) {
+        toast({ title: "Permission denied", description: "Your access may have changed. Please refresh.", variant: "destructive" });
+        setSubmitting(false);
+        return;
+      }
       const newVersionNum = latestVersion.version_num + 1;
       const { data: newV, error: vErr } = await supabase.from("agreement_versions").insert([{
         agreement_id: agreementId,
@@ -351,6 +370,12 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
             if (!user) return;
             setSubmitting(true);
             try {
+              const perms = await checkPermission(user.id, groupId);
+              if (!perms.isMember) {
+                toast({ title: "Permission denied", description: "Your access may have changed. Please refresh.", variant: "destructive" });
+                setSubmitting(false);
+                return;
+              }
               const { error } = await supabase.rpc("propose_agreement_version", {
                 p_agreement_id: agreementId,
                 p_group_id: groupId,
