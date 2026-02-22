@@ -812,6 +812,16 @@ export type Database = {
         Args: { p_agreement_id: string; p_body: string; p_group_id: string }
         Returns: string
       }
+      respond_to_agreement: {
+        Args: {
+          p_agreement_id: string
+          p_group_id: string
+          p_message?: string
+          p_response: string
+          p_version_id: string
+        }
+        Returns: undefined
+      }
       upsert_supported_person: {
         Args: { p_group_id: string; p_label: string; p_subject_user_id: string }
         Returns: string
