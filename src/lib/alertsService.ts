@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 interface CreateAlertParams {
   group_id: string;
   subject_person_id: string;
-  created_by_user_id: string;
   type: string;
   severity: string;
   title: string;
@@ -15,137 +14,164 @@ interface CreateAlertParams {
 interface CreateAlertResult {
   inserted?: boolean;
   skipped?: boolean;
-  reason?: "duplicate_open" | "throttled_24h";
+  reason?: "duplicate_open" | "throttled_24h" | "invalid_params" | "unauthenticated" | "error";
+  details?: string;
 }
 
 /**
- * Centralized alert creation with dedupe and throttling.
- *
- * 1. Checks for existing open/acknowledged alert with same key fields → skip if found.
- * 2. Checks for any alert (any status) with same key fields created in last 24h → skip if found.
- * 3. Otherwise inserts.
+ * Centralized alert creation with dedupe, throttling, and error safety.
+ * Never throws. Never returns inserted:true on failure.
+ * Derives actor from auth session internally.
  */
 export async function createAlertIfNeeded(
   params: CreateAlertParams
 ): Promise<CreateAlertResult> {
-  const {
-    group_id,
-    subject_person_id,
-    created_by_user_id,
-    type,
-    severity,
-    title,
-    body,
-    source_table,
-    source_id,
-  } = params;
+  const { group_id, subject_person_id, type, severity, title, body, source_table, source_id } = params;
 
+  // --- Strict param validation ---
   if (!group_id || !subject_person_id || !type || !severity || !title) {
-    return { skipped: true, reason: "duplicate_open" };
+    return { skipped: true, reason: "invalid_params", details: "missing required fields" };
+  }
+  if (source_table && !source_id) {
+    return { skipped: true, reason: "invalid_params", details: "source_table requires source_id" };
   }
 
-  // --- Dedupe: check for open/acknowledged alert with same key ---
-  let dedupeQuery = supabase
-    .from("alerts")
-    .select("id")
-    .eq("group_id", group_id)
-    .eq("subject_person_id", subject_person_id)
-    .eq("type", type)
-    .in("status", ["open", "acknowledged"])
-    .limit(1);
-
-  if (source_table) {
-    dedupeQuery = dedupeQuery.eq("source_table", source_table);
-  } else {
-    dedupeQuery = dedupeQuery.is("source_table", null);
-  }
-  if (source_id) {
-    dedupeQuery = dedupeQuery.eq("source_id", source_id);
-  } else {
-    dedupeQuery = dedupeQuery.is("source_id", null);
+  // --- Derive actor from auth ---
+  let actorUserId: string;
+  try {
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !userData?.user) {
+      return { skipped: true, reason: "unauthenticated" };
+    }
+    actorUserId = userData.user.id;
+  } catch {
+    return { skipped: true, reason: "unauthenticated", details: "auth check failed" };
   }
 
-  const { data: dupes } = await dedupeQuery;
-  if (dupes && dupes.length > 0) {
-    return { skipped: true, reason: "duplicate_open" };
+  // --- Dedupe: open/acknowledged with same key ---
+  try {
+    let dedupeQuery = supabase
+      .from("alerts")
+      .select("id")
+      .eq("group_id", group_id)
+      .eq("subject_person_id", subject_person_id)
+      .eq("type", type)
+      .in("status", ["open", "acknowledged"])
+      .limit(1);
+
+    if (source_table) {
+      dedupeQuery = dedupeQuery.eq("source_table", source_table);
+    } else {
+      dedupeQuery = dedupeQuery.is("source_table", null);
+    }
+    if (source_id) {
+      dedupeQuery = dedupeQuery.eq("source_id", source_id);
+    } else {
+      dedupeQuery = dedupeQuery.is("source_id", null);
+    }
+
+    const { data: dupes, error: dedupeErr } = await dedupeQuery;
+    if (dedupeErr) {
+      return { skipped: true, reason: "error", details: `dedupe query: ${dedupeErr.message}` };
+    }
+    if (dupes && dupes.length > 0) {
+      return { skipped: true, reason: "duplicate_open" };
+    }
+  } catch {
+    return { skipped: true, reason: "error", details: "dedupe query exception" };
   }
 
-  // --- Throttle: any alert with same key in last 24h ---
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // --- Throttle: same key in last 24h ---
+  try {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  let throttleQuery = supabase
-    .from("alerts")
-    .select("id")
-    .eq("group_id", group_id)
-    .eq("subject_person_id", subject_person_id)
-    .eq("type", type)
-    .gte("created_at", twentyFourHoursAgo)
-    .limit(1);
+    let throttleQuery = supabase
+      .from("alerts")
+      .select("id")
+      .eq("group_id", group_id)
+      .eq("subject_person_id", subject_person_id)
+      .eq("type", type)
+      .gte("created_at", twentyFourHoursAgo)
+      .limit(1);
 
-  if (source_table) {
-    throttleQuery = throttleQuery.eq("source_table", source_table);
-  } else {
-    throttleQuery = throttleQuery.is("source_table", null);
-  }
-  if (source_id) {
-    throttleQuery = throttleQuery.eq("source_id", source_id);
-  } else {
-    throttleQuery = throttleQuery.is("source_id", null);
-  }
+    if (source_table) {
+      throttleQuery = throttleQuery.eq("source_table", source_table);
+    } else {
+      throttleQuery = throttleQuery.is("source_table", null);
+    }
+    if (source_id) {
+      throttleQuery = throttleQuery.eq("source_id", source_id);
+    } else {
+      throttleQuery = throttleQuery.is("source_id", null);
+    }
 
-  const { data: recent } = await throttleQuery;
-  if (recent && recent.length > 0) {
-    return { skipped: true, reason: "throttled_24h" };
+    const { data: recent, error: throttleErr } = await throttleQuery;
+    if (throttleErr) {
+      return { skipped: true, reason: "error", details: `throttle query: ${throttleErr.message}` };
+    }
+    if (recent && recent.length > 0) {
+      return { skipped: true, reason: "throttled_24h" };
+    }
+  } catch {
+    return { skipped: true, reason: "error", details: "throttle query exception" };
   }
 
   // --- Insert ---
-  await supabase.from("alerts").insert({
-    group_id,
-    subject_person_id,
-    created_by_user_id,
-    type,
-    severity,
-    title,
-    body: body || null,
-    source_table: source_table || null,
-    source_id: source_id || null,
-  });
-
-  return { inserted: true };
+  try {
+    const { error: insErr } = await supabase.from("alerts").insert({
+      group_id,
+      subject_person_id,
+      created_by_user_id: actorUserId,
+      type,
+      severity,
+      title,
+      body: body || null,
+      source_table: source_table || null,
+      source_id: source_id || null,
+    });
+    if (insErr) {
+      return { skipped: true, reason: "error", details: `insert failed: ${insErr.message}` };
+    }
+    return { inserted: true };
+  } catch {
+    return { skipped: true, reason: "error", details: "insert exception" };
+  }
 }
 
 /**
  * If any contradiction for the given person is open and older than 24h,
- * ensure a pattern_signal alert exists (deduped).
+ * ensure a pattern_signal alert exists (deduped). Best-effort, never throws.
  */
 export async function ensureUnresolvedContradictionAlert(
   groupId: string,
-  subjectPersonId: string,
-  userId: string
+  subjectPersonId: string
 ): Promise<void> {
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  try {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  const { data: oldOpen } = await supabase
-    .from("contradictions")
-    .select("id")
-    .eq("group_id", groupId)
-    .eq("subject_person_id", subjectPersonId)
-    .eq("status", "open")
-    .lt("created_at", twentyFourHoursAgo)
-    .order("created_at", { ascending: true })
-    .limit(1);
+    const { data: oldOpen, error } = await supabase
+      .from("contradictions")
+      .select("id")
+      .eq("group_id", groupId)
+      .eq("subject_person_id", subjectPersonId)
+      .eq("status", "open")
+      .lt("created_at", twentyFourHoursAgo)
+      .order("created_at", { ascending: true })
+      .limit(1);
 
-  if (!oldOpen || oldOpen.length === 0) return;
+    if (error || !oldOpen || oldOpen.length === 0) return;
 
-  await createAlertIfNeeded({
-    group_id: groupId,
-    subject_person_id: subjectPersonId,
-    created_by_user_id: userId,
-    type: "pattern_signal",
-    severity: "tier2",
-    title: "Open contradiction unresolved > 24h",
-    body: "At least one contradiction has been open for more than 24 hours. Review and resolve or dismiss.",
-    source_table: "contradictions",
-    source_id: oldOpen[0].id,
-  });
+    await createAlertIfNeeded({
+      group_id: groupId,
+      subject_person_id: subjectPersonId,
+      type: "pattern_signal",
+      severity: "tier2",
+      title: "Open contradiction unresolved > 24h",
+      body: "At least one contradiction has been open for more than 24 hours. Review and resolve or dismiss.",
+      source_table: "contradictions",
+      source_id: oldOpen[0].id,
+    });
+  } catch {
+    // best-effort: swallow
+  }
 }

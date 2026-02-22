@@ -91,7 +91,6 @@ export default function InterventionDetail({ interventionId, groupId, isCoordina
         await createAlertIfNeeded({
           group_id: item.group_id,
           subject_person_id: item.subject_person_id,
-          created_by_user_id: user.id,
           type: "intervention_stopped",
           severity: "tier1",
           title: `Intervention ${newStatus}: ${item.title.slice(0, 80)}`,

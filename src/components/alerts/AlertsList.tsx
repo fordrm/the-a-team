@@ -57,7 +57,7 @@ export default function AlertsList({ groupId, personId, isCoordinator, onView }:
   // Pattern signal: check for unresolved contradictions > 24h (coordinator only)
   useEffect(() => {
     if (!personId || !isCoordinator || !user) return;
-    ensureUnresolvedContradictionAlert(groupId, personId, user.id);
+    ensureUnresolvedContradictionAlert(groupId, personId);
   }, [groupId, personId, isCoordinator, user]);
 
   useEffect(() => {
