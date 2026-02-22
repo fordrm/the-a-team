@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Info, LogOut, Pencil, HelpCircle, CheckCircle2, Clock } from "lucide-react";
+import { Info, LogOut, Pencil, HelpCircle, CheckCircle2, Clock, Bell } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AgreementDetail from "@/components/agreements/AgreementDetail";
 
@@ -336,7 +336,13 @@ export default function PersonPortal() {
             <CardHeader>
               <CardTitle className="text-lg">My Agreements</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
+              {agreements.filter(a => a.status === "proposed").length > 0 && (
+                <div className="rounded-md bg-primary/10 border border-primary/20 px-3 py-2 text-sm text-primary flex items-center gap-2">
+                  <Bell className="h-4 w-4" />
+                  {agreements.filter(a => a.status === "proposed").length} agreement{agreements.filter(a => a.status === "proposed").length !== 1 ? "s" : ""} waiting for your response
+                </div>
+              )}
               {agreements.length === 0 ? (
                 <div className="py-4 text-center">
                   <p className="text-sm font-medium">No agreements yet</p>
@@ -368,7 +374,7 @@ export default function PersonPortal() {
                                 Needs your response
                               </Badge>
                             )}
-                            <Badge variant={a.status === "active" || a.status === "accepted" ? "default" : "secondary"}>
+                            <Badge variant={a.status === "accepted" ? "default" : a.status === "declined" ? "destructive" : "secondary"}>
                               {a.status}
                             </Badge>
                           </div>
