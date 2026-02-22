@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { ensureUnresolvedContradictionAlert } from "@/lib/alertsService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +20,7 @@ interface AlertRow {
 interface Props {
   groupId: string;
   personId: string | null;
+  isCoordinator: boolean;
   onView: (id: string) => void;
 }
 
@@ -43,12 +46,19 @@ const statusColor = (s: string): "destructive" | "default" | "secondary" | "outl
   }
 };
 
-export default function AlertsList({ groupId, personId, onView }: Props) {
+export default function AlertsList({ groupId, personId, isCoordinator, onView }: Props) {
+  const { user } = useAuth();
   const [items, setItems] = useState<AlertRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
   const [severityFilter, setSeverityFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+
+  // Pattern signal: check for unresolved contradictions > 24h (coordinator only)
+  useEffect(() => {
+    if (!personId || !isCoordinator || !user) return;
+    ensureUnresolvedContradictionAlert(groupId, personId, user.id);
+  }, [groupId, personId, isCoordinator, user]);
 
   useEffect(() => {
     if (!personId) { setItems([]); setLoading(false); return; }

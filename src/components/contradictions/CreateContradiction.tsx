@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { createAlertIfNeeded } from "@/lib/alertsService";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,9 +100,9 @@ export default function CreateContradiction({ groupId, personId, onBack, onCreat
       }).select("id").single();
       if (error) throw error;
 
-      // Best-effort alert generation (only succeeds for coordinators)
+      // Centralized alert generation with dedupe
       if (inserted) {
-        await supabase.from("alerts").insert({
+        await createAlertIfNeeded({
           group_id: groupId,
           subject_person_id: personId,
           created_by_user_id: user.id,
