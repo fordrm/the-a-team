@@ -574,6 +574,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bootstrap_create_group: { Args: { p_name: string }; Returns: string }
       is_group_coordinator: {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean

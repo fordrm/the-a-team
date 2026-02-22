@@ -20,49 +20,14 @@ export default function CreateGroup() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const { data: userData, error: userErr } = await supabase.auth.getUser();
-      if (userErr || !userData.user) {
-        toast({ title: "Please sign in again.", variant: "destructive" });
-        navigate("/auth", { replace: true });
-        return;
+      const { data: groupId, error } = await supabase.rpc("bootstrap_create_group", {
+        p_name: name.trim(),
+      });
+      if (error) {
+        console.error("CreateGroup:bootstrap error", error);
+        throw error;
       }
-      const currentUserId = userData.user.id;
-      console.log("CreateGroup:getUser id", currentUserId);
-
-      const { data: sessionData } = await supabase.auth.getSession();
-      const sessionUserId = sessionData?.session?.user?.id ?? null;
-      console.log("CreateGroup:getSession user id", sessionUserId);
-
-      const { data: me, error: meErr } = await supabase.rpc("whoami");
-      console.log("CreateGroup:whoami()", me, meErr?.message);
-
-      const insertPayload = { name: name.trim(), created_by_user_id: currentUserId };
-      console.log("CreateGroup:insert payload", insertPayload);
-
-      // Insert group
-      const { data: group, error: groupErr } = await supabase
-        .from("groups")
-        .insert(insertPayload)
-        .select("id")
-        .single();
-      if (groupErr) {
-        console.error("CreateGroup:insert error", groupErr);
-        throw groupErr;
-      }
-
-      // Insert creator membership
-      const { error: memErr } = await supabase
-        .from("group_memberships")
-        .insert({
-          group_id: group.id,
-          user_id: currentUserId,
-          role: "coordinator",
-          is_active: true,
-          capabilities: {},
-        });
-      if (memErr) throw memErr;
-
-      navigate(`/group/${group.id}`);
+      navigate(`/group/${groupId}`);
     } catch (err: any) {
       console.error("Create group error:", err.message);
       toast({ title: "Error creating group", description: err.message, variant: "destructive" });
