@@ -360,6 +360,47 @@ export type Database = {
           },
         ]
       }
+      group_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          display_name: string | null
+          email: string
+          group_id: string
+          id: string
+          invited_by: string
+          role: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          display_name?: string | null
+          email: string
+          group_id: string
+          id?: string
+          invited_by: string
+          role: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          group_id?: string
+          id?: string
+          invited_by?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_invites_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_memberships: {
         Row: {
           capabilities: Json
@@ -675,6 +716,15 @@ export type Database = {
         Returns: string
       }
       bootstrap_create_group: { Args: { p_name: string }; Returns: string }
+      invite_member_by_email: {
+        Args: {
+          p_display_name?: string
+          p_email: string
+          p_group_id: string
+          p_role: string
+        }
+        Returns: Json
+      }
       is_group_coordinator: {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
