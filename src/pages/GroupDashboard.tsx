@@ -353,6 +353,7 @@ export default function GroupDashboard() {
                   key={alertKey}
                   groupId={groupId!}
                   personId={activePersonId}
+                  isCoordinator={isCoordinator}
                   onView={(id) => setAlertView({ type: "detail", id })}
                 />
               )}

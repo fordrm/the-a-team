@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { createAlertIfNeeded } from "@/lib/alertsService";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -122,9 +123,9 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
       }).select("id").single();
       if (error) throw error;
 
-      // Best-effort alert
+      // Centralized alert generation with dedupe
       if (acc) {
-        await supabase.from("alerts").insert({
+        await createAlertIfNeeded({
           group_id: groupId,
           subject_person_id: agreement.subject_person_id,
           created_by_user_id: user.id,
@@ -170,9 +171,9 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
       }).select("id").single();
       if (aErr) throw aErr;
 
-      // Best-effort alert
+      // Centralized alert generation with dedupe
       if (acc) {
-        await supabase.from("alerts").insert({
+        await createAlertIfNeeded({
           group_id: groupId,
           subject_person_id: agreement.subject_person_id,
           created_by_user_id: user.id,

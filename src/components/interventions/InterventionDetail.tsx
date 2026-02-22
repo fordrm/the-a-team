@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { createAlertIfNeeded } from "@/lib/alertsService";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,9 +86,9 @@ export default function InterventionDetail({ interventionId, groupId, isCoordina
       if (error) throw error;
       setItem({ ...item, status: newStatus });
 
-      // Generate alert when stopped or completed
+      // Centralized alert generation with dedupe
       if (newStatus === "stopped" || newStatus === "completed") {
-        await supabase.from("alerts").insert({
+        await createAlertIfNeeded({
           group_id: item.group_id,
           subject_person_id: item.subject_person_id,
           created_by_user_id: user.id,
