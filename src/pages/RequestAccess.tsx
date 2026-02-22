@@ -58,7 +58,12 @@ export default function RequestAccess() {
 
   const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!groupId || !user) return;
+    console.log("Resolved groupId:", groupId);
+    if (!groupId || groupId.includes(":")) {
+      toast({ title: "Error", description: "Invalid group id. Reload page.", variant: "destructive" });
+      return;
+    }
+    if (!user) return;
     setSubmitting(true);
     try {
       const { error } = await supabase.from("person_access_requests").insert({
@@ -121,7 +126,10 @@ export default function RequestAccess() {
     <div className="min-h-screen px-4 py-8">
       <div className="mx-auto max-w-lg space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Supported Person Access</h1>
+          <div>
+            <h1 className="text-2xl font-bold">Supported Person Access</h1>
+            <Badge variant="outline" className="mt-1 font-mono text-xs">Group ID: {groupId ?? "undefined"}</Badge>
+          </div>
           <Button variant="ghost" size="sm" onClick={() => navigate(`/group/${groupId}`)}>
             ← Back
           </Button>
