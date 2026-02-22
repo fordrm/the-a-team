@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import CreateGroup from "./pages/CreateGroup";
 import GroupDashboard from "./pages/GroupDashboard";
+import RequestAccess from "./pages/RequestAccess";
+import PersonPortal from "./pages/PersonPortal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/create-group" element={<CreateGroup />} />
             <Route path="/group/:groupId" element={<GroupDashboard />} />
+            <Route path="/group/:groupId/request-access" element={<RequestAccess />} />
+            <Route path="/person-portal" element={<PersonPortal />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

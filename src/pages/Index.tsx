@@ -20,23 +20,37 @@ export default function Index() {
       return;
     }
 
-    // Check memberships
-    supabase
-      .from("group_memberships")
-      .select("group_id")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .then(({ data }) => {
-        const memberships = (data ?? []) as MembershipRow[];
-        if (memberships.length === 0) {
-          navigate("/create-group", { replace: true });
-        } else if (memberships.length === 1) {
-          navigate(`/group/${memberships[0].group_id}`, { replace: true });
-        } else {
-          // multiple groups — stay here as picker
-          setChecking(false);
-        }
-      });
+    const checkAccess = async () => {
+      // Check if user is a supported person (has a persons row with their user_id)
+      const { data: personRows } = await supabase
+        .from("persons")
+        .select("id")
+        .eq("user_id", user.id);
+
+      if (personRows && personRows.length > 0) {
+        // Supported person → go to portal
+        navigate("/person-portal", { replace: true });
+        return;
+      }
+
+      // Check group memberships
+      const { data } = await supabase
+        .from("group_memberships")
+        .select("group_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true);
+
+      const memberships = (data ?? []) as MembershipRow[];
+      if (memberships.length === 0) {
+        navigate("/create-group", { replace: true });
+      } else if (memberships.length === 1) {
+        navigate(`/group/${memberships[0].group_id}`, { replace: true });
+      } else {
+        setChecking(false);
+      }
+    };
+
+    checkAccess();
   }, [user, loading, navigate]);
 
   if (loading || checking) {
