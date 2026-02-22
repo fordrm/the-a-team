@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle, Activity, Bell } from "lucide-react";
@@ -45,6 +46,7 @@ export default function GroupDashboard() {
   const [persons, setPersons] = useState<PersonRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [activePersonId, setActivePersonId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("members");
   const [agreementView, setAgreementView] = useState<AgreementView>({ type: "list" });
   const [timelineView, setTimelineView] = useState<TimelineView>({ type: "list" });
   const [timelineKey, setTimelineKey] = useState(0);
@@ -143,18 +145,34 @@ export default function GroupDashboard() {
           </Button>
         </div>
 
-        <Tabs defaultValue={isSubjectPerson ? "agreements" : "members"}>
-          <div className="overflow-x-auto -mx-4 px-4">
-            <TabsList className="w-max min-w-full">
-              {!isSubjectPerson && <TabsTrigger value="members" className="text-xs sm:text-sm">Members</TabsTrigger>}
-              {!isSubjectPerson && <TabsTrigger value="persons" className="text-xs sm:text-sm">Persons</TabsTrigger>}
-              <TabsTrigger value="agreements" className="text-xs sm:text-sm">Agreements</TabsTrigger>
-              <TabsTrigger value="timeline" className="text-xs sm:text-sm">{isSubjectPerson ? "Shared Notes" : "Timeline"}</TabsTrigger>
-              {!isSubjectPerson && <TabsTrigger value="contradictions" className="text-xs sm:text-sm">Conflicts</TabsTrigger>}
-              {!isSubjectPerson && <TabsTrigger value="interventions" className="text-xs sm:text-sm">Interventions</TabsTrigger>}
-              {!isSubjectPerson && <TabsTrigger value="alerts" className="text-xs sm:text-sm">Alerts</TabsTrigger>}
-            </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          {/* Mobile: dropdown */}
+          <div className="sm:hidden">
+            <Select value={activeTab} onValueChange={setActiveTab}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50">
+                {!isSubjectPerson && <SelectItem value="members"><span className="flex items-center gap-2"><Users className="h-4 w-4" /> Members</span></SelectItem>}
+                {!isSubjectPerson && <SelectItem value="persons"><span className="flex items-center gap-2"><Heart className="h-4 w-4" /> Persons</span></SelectItem>}
+                <SelectItem value="agreements"><span className="flex items-center gap-2"><Clock className="h-4 w-4" /> Agreements</span></SelectItem>
+                <SelectItem value="timeline"><span className="flex items-center gap-2"><Clock className="h-4 w-4" /> {isSubjectPerson ? "Shared Notes" : "Timeline"}</span></SelectItem>
+                {!isSubjectPerson && <SelectItem value="contradictions"><span className="flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Conflicts</span></SelectItem>}
+                {!isSubjectPerson && <SelectItem value="interventions"><span className="flex items-center gap-2"><Activity className="h-4 w-4" /> Interventions</span></SelectItem>}
+                {!isSubjectPerson && <SelectItem value="alerts"><span className="flex items-center gap-2"><Bell className="h-4 w-4" /> Alerts</span></SelectItem>}
+              </SelectContent>
+            </Select>
           </div>
+          {/* Desktop: tabs */}
+          <TabsList className="hidden sm:flex w-full">
+            {!isSubjectPerson && <TabsTrigger value="members" className="flex-1">Members</TabsTrigger>}
+            {!isSubjectPerson && <TabsTrigger value="persons" className="flex-1">Persons</TabsTrigger>}
+            <TabsTrigger value="agreements" className="flex-1">Agreements</TabsTrigger>
+            <TabsTrigger value="timeline" className="flex-1">{isSubjectPerson ? "Shared Notes" : "Timeline"}</TabsTrigger>
+            {!isSubjectPerson && <TabsTrigger value="contradictions" className="flex-1">Conflicts</TabsTrigger>}
+            {!isSubjectPerson && <TabsTrigger value="interventions" className="flex-1">Interventions</TabsTrigger>}
+            {!isSubjectPerson && <TabsTrigger value="alerts" className="flex-1">Alerts</TabsTrigger>}
+          </TabsList>
 
           {/* Members Tab */}
           {!isSubjectPerson && (
