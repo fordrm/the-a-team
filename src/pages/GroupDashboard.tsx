@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle, Activity, Bell, Pencil, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle, Activity, Bell, Pencil, Trash2, Mail } from "lucide-react";
 import Timeline from "@/components/timeline/Timeline";
 import AddNote from "@/components/timeline/AddNote";
 import AgreementsList from "@/components/agreements/AgreementsList";
@@ -58,10 +59,9 @@ export default function GroupDashboard() {
   const [alertView, setAlertView] = useState<AlertView>({ type: "list" });
   const [alertKey, setAlertKey] = useState(0);
 
-  // invite form
+  // invite form (members only - coordinator/supporter)
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("supporter");
-  const [invitePersonLabel, setInvitePersonLabel] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
 
@@ -69,6 +69,12 @@ export default function GroupDashboard() {
   const [personLabel, setPersonLabel] = useState("");
   const [personOpen, setPersonOpen] = useState(false);
   const [creatingPerson, setCreatingPerson] = useState(false);
+
+  // invite supported person portal access
+  const [portalInviteOpen, setPortalInviteOpen] = useState(false);
+  const [portalInvitePersonId, setPortalInvitePersonId] = useState<string | null>(null);
+  const [portalInviteEmail, setPortalInviteEmail] = useState("");
+  const [sendingPortalInvite, setSendingPortalInvite] = useState(false);
 
   // edit display name
   const [editNameOpen, setEditNameOpen] = useState(false);
@@ -126,7 +132,6 @@ export default function GroupDashboard() {
           group_id: groupId,
           email: inviteEmail,
           role: inviteRole,
-          person_label: inviteRole === "supported_person" ? invitePersonLabel : null,
         },
       });
       if (error) throw error;
@@ -138,7 +143,6 @@ export default function GroupDashboard() {
       setInviteOpen(false);
       setInviteEmail("");
       setInviteRole("supporter");
-      setInvitePersonLabel("");
       fetchData();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -160,6 +164,33 @@ export default function GroupDashboard() {
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally { setCreatingPerson(false); }
+  };
+
+  const handlePortalInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!groupId || !portalInvitePersonId) return;
+    setSendingPortalInvite(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("invite-supported-person", {
+        body: {
+          groupId,
+          personId: portalInvitePersonId,
+          email: portalInviteEmail,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const msg = data?.existingUser
+        ? `${portalInviteEmail} has been linked. They can sign in to access their portal.`
+        : `Invite sent to ${portalInviteEmail}. Once they set a password and sign in, they'll see their portal.`;
+      toast({ title: "Portal invite sent", description: msg });
+      setPortalInviteOpen(false);
+      setPortalInviteEmail("");
+      setPortalInvitePersonId(null);
+      fetchData();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally { setSendingPortalInvite(false); }
   };
 
   // Derived: is current user the supported person for active person? Is coordinator?
@@ -224,7 +255,7 @@ export default function GroupDashboard() {
                     <Button size="sm" variant="outline"><UserPlus className="mr-1 h-4 w-4" /> Invite</Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <DialogHeader><DialogTitle>Invite to Group</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>Invite Team Member</DialogTitle></DialogHeader>
                     <form onSubmit={handleInvite} className="space-y-4">
                       <div className="space-y-2">
                         <Label>Email</Label>
@@ -237,16 +268,9 @@ export default function GroupDashboard() {
                           <SelectContent className="bg-background z-50">
                             <SelectItem value="coordinator">Coordinator</SelectItem>
                             <SelectItem value="supporter">Supporter</SelectItem>
-                            <SelectItem value="supported_person">Supported Person</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                      {inviteRole === "supported_person" && (
-                        <div className="space-y-2">
-                          <Label>Person Label</Label>
-                          <Input required value={invitePersonLabel} onChange={e => setInvitePersonLabel(e.target.value)} placeholder="e.g. Mom, Dad, Alex" />
-                        </div>
-                      )}
                       <Button type="submit" className="w-full" disabled={inviting}>{inviting ? "Sending…" : "Send Invite"}</Button>
                     </form>
                   </DialogContent>
@@ -354,9 +378,30 @@ export default function GroupDashboard() {
                           activePersonId === p.id ? "border-primary bg-accent" : "hover:bg-muted"
                         }`}
                       >
-                        <span className="font-medium">{p.label}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{p.label}</span>
+                          {p.user_id ? (
+                            <Badge variant="secondary" className="text-xs">Portal linked</Badge>
+                          ) : null}
+                        </div>
                         <div className="flex items-center gap-2">
                           {activePersonId === p.id && <span className="text-xs text-primary font-medium">Active</span>}
+                          {/* Invite Portal Access button - only for coordinators, only if no user linked */}
+                          {isCoordinator && !p.user_id && (
+                            <button
+                              type="button"
+                              className="text-muted-foreground hover:text-primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPortalInvitePersonId(p.id);
+                                setPortalInviteEmail("");
+                                setPortalInviteOpen(true);
+                              }}
+                              title="Invite portal access"
+                            >
+                              <Mail className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                           {isCoordinator && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
@@ -396,6 +441,36 @@ export default function GroupDashboard() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Portal Invite Dialog */}
+            <Dialog open={portalInviteOpen} onOpenChange={setPortalInviteOpen}>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Invite Portal Access</DialogTitle></DialogHeader>
+                <form onSubmit={handlePortalInvite} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Person</Label>
+                    <Select value={portalInvitePersonId ?? ""} onValueChange={setPortalInvitePersonId}>
+                      <SelectTrigger><SelectValue placeholder="Select person" /></SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        {persons.filter(p => !p.user_id).map(p => (
+                          <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input required type="email" value={portalInviteEmail} onChange={e => setPortalInviteEmail(e.target.value)} placeholder="person@example.com" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    The person will receive an email to set up their account. Once they sign in, they'll land in their portal automatically.
+                  </p>
+                  <Button type="submit" className="w-full" disabled={sendingPortalInvite || !portalInvitePersonId}>
+                    {sendingPortalInvite ? "Sending…" : "Send Invite"}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
           )}
 
