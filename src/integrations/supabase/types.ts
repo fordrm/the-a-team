@@ -582,6 +582,7 @@ export type Database = {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
+      whoami: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
