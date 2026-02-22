@@ -38,6 +38,11 @@ export default function CreateIntervention({ groupId, personId, onBack, onCreate
     e.preventDefault();
     if (!user) return;
     setSaving(true);
+    if (startAt && endAt && new Date(endAt) < new Date(startAt)) {
+      toast({ title: "Validation error", description: "End date must be after start date.", variant: "destructive" });
+      setSaving(false);
+      return;
+    }
     try {
       const { error } = await supabase.from("interventions").insert({
         group_id: groupId,

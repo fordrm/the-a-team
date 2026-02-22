@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { resetAppState } from "@/lib/resetAppState";
+import { queryClient } from "@/lib/queryClient";
 
 interface AuthContextType {
   session: Session | null;
@@ -30,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const path = window.location.pathname;
           const publicPaths = ["/auth", "/reset-password", "/update-password"];
           resetAppState();
+          queryClient.clear();
           if (!publicPaths.includes(path)) {
             window.location.replace("/auth");
           }

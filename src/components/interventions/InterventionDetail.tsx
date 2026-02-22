@@ -53,11 +53,15 @@ export default function InterventionDetail({ interventionId, groupId, isCoordina
 
   useEffect(() => {
     const fetchItem = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("interventions")
         .select("*")
         .eq("id", interventionId)
         .single();
+      if (error) {
+        console.error("InterventionDetail fetch error:", error);
+        return;
+      }
       if (data) {
         setItem(data as InterventionRow);
         setNewStatus(data.status);
