@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { signOutAndReset } from "@/lib/signOut";
 
 interface MembershipRow {
   group_id: string;
@@ -47,7 +48,7 @@ export default function Index() {
 }
 
 function GroupPicker() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
 
@@ -86,7 +87,7 @@ function GroupPicker() {
         </div>
         <div className="flex justify-between">
           <button onClick={() => navigate("/create-group")} className="text-sm text-primary hover:underline">+ New Group</button>
-          <button onClick={signOut} className="text-sm text-muted-foreground hover:underline">Sign Out</button>
+          <button onClick={() => signOutAndReset(navigate)} className="text-sm text-muted-foreground hover:underline">Sign Out</button>
         </div>
       </div>
     </div>

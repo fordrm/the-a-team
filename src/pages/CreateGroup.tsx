@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
+import { signOutAndReset } from "@/lib/signOut";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
 export default function CreateGroup() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [name, setName] = useState("");
@@ -66,7 +67,7 @@ export default function CreateGroup() {
             </Button>
           </form>
           <div className="mt-6 text-center">
-            <button type="button" onClick={signOut} className="text-sm text-muted-foreground hover:underline">Sign Out</button>
+            <button type="button" onClick={() => signOutAndReset(navigate)} className="text-sm text-muted-foreground hover:underline">Sign Out</button>
           </div>
         </CardContent>
       </Card>
