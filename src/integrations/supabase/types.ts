@@ -116,29 +116,35 @@ export type Database = {
       }
       agreements: {
         Row: {
+          closure: Json | null
           created_at: string
           created_by_user_id: string
           current_version_id: string | null
           group_id: string
           id: string
+          renewed_as: string | null
           status: string
           subject_person_id: string
         }
         Insert: {
+          closure?: Json | null
           created_at?: string
           created_by_user_id: string
           current_version_id?: string | null
           group_id: string
           id?: string
+          renewed_as?: string | null
           status?: string
           subject_person_id: string
         }
         Update: {
+          closure?: Json | null
           created_at?: string
           created_by_user_id?: string
           current_version_id?: string | null
           group_id?: string
           id?: string
+          renewed_as?: string | null
           status?: string
           subject_person_id?: string
         }
@@ -148,6 +154,13 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreements_renewed_as_fkey"
+            columns: ["renewed_as"]
+            isOneToOne: false
+            referencedRelation: "agreements"
             referencedColumns: ["id"]
           },
           {
@@ -760,6 +773,7 @@ export type Database = {
         Returns: string
       }
       bootstrap_create_group: { Args: { p_name: string }; Returns: string }
+      check_agreement_reviews: { Args: never; Returns: undefined }
       create_agreement_with_version: {
         Args: {
           p_created_by: string

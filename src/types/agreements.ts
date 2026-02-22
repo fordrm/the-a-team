@@ -117,6 +117,7 @@ export function computeFieldDiffs(
 
 // ─── Status & Closure Types ─────────────────────────────
 export type AgreementStatus =
+  | "draft"
   | "proposed"
   | "accepted"
   | "declined"
@@ -126,20 +127,30 @@ export type AgreementStatus =
   | "incomplete"
   | "lapsed";
 
+export type ClosureStatus = "completed" | "incomplete" | "lapsed";
+
+export type PersonAssessment = "going_well" | "struggling" | "want_change" | "move_on";
+
 export interface ClosureData {
-  outcome: string;
+  status: ClosureStatus;
+  closed_by: string;
+  closed_at: string;
   compliance_estimate?: number;
-  person_assessment?: string;
+  person_assessment?: PersonAssessment;
   reflection?: string;
+  renewed_as?: string;
   early_close?: boolean;
   days_active?: number;
   days_planned?: number;
-  renewed_as?: string;
 }
 
-export const PERSON_ASSESSMENT_OPTIONS = [
-  { value: "on_track", label: "On track", emoji: "✅" },
-  { value: "struggling", label: "Struggling", emoji: "😓" },
-  { value: "needs_change", label: "Needs change", emoji: "🔄" },
-  { value: "not_working", label: "Not working", emoji: "❌" },
-] as const;
+export const TERMINAL_STATUSES: AgreementStatus[] = ["completed", "incomplete", "lapsed"];
+export const ACTIVE_STATUSES: AgreementStatus[] = ["accepted", "review_needed"];
+export const PENDING_STATUSES: AgreementStatus[] = ["proposed", "draft"];
+
+export const PERSON_ASSESSMENT_OPTIONS: { value: PersonAssessment; label: string; emoji: string }[] = [
+  { value: "going_well", label: "Going well", emoji: "😊" },
+  { value: "struggling", label: "Struggling", emoji: "😐" },
+  { value: "want_change", label: "Want to change it", emoji: "🔄" },
+  { value: "move_on", label: "Ready to move on", emoji: "✓" },
+];
