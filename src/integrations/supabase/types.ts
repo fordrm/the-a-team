@@ -120,6 +120,7 @@ export type Database = {
           created_at: string
           created_by_user_id: string
           current_version_id: string | null
+          cycle_id: string | null
           group_id: string
           id: string
           renewed_as: string | null
@@ -131,6 +132,7 @@ export type Database = {
           created_at?: string
           created_by_user_id: string
           current_version_id?: string | null
+          cycle_id?: string | null
           group_id: string
           id?: string
           renewed_as?: string | null
@@ -142,6 +144,7 @@ export type Database = {
           created_at?: string
           created_by_user_id?: string
           current_version_id?: string | null
+          cycle_id?: string | null
           group_id?: string
           id?: string
           renewed_as?: string | null
@@ -149,6 +152,13 @@ export type Database = {
           subject_person_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "agreements_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_cycles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "agreements_group_id_fkey"
             columns: ["group_id"]
@@ -295,6 +305,7 @@ export type Database = {
           channel: string | null
           consent_level: string
           created_at: string
+          cycle_id: string | null
           group_id: string
           id: string
           indicators: Json
@@ -309,6 +320,7 @@ export type Database = {
           channel?: string | null
           consent_level?: string
           created_at?: string
+          cycle_id?: string | null
           group_id: string
           id?: string
           indicators?: Json
@@ -323,6 +335,7 @@ export type Database = {
           channel?: string | null
           consent_level?: string
           created_at?: string
+          cycle_id?: string | null
           group_id?: string
           id?: string
           indicators?: Json
@@ -332,6 +345,13 @@ export type Database = {
           visibility_tier?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contact_notes_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_cycles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contact_notes_group_id_fkey"
             columns: ["group_id"]
@@ -576,6 +596,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by_user_id: string
+          cycle_id: string | null
           end_at: string | null
           group_id: string
           id: string
@@ -590,6 +611,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by_user_id: string
+          cycle_id?: string | null
           end_at?: string | null
           group_id: string
           id?: string
@@ -604,6 +626,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by_user_id?: string
+          cycle_id?: string | null
           end_at?: string | null
           group_id?: string
           id?: string
@@ -616,6 +639,13 @@ export type Database = {
           visibility_tier?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "interventions_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_cycles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "interventions_group_id_fkey"
             columns: ["group_id"]
@@ -755,6 +785,69 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracking_cycles: {
+        Row: {
+          actual_end: string | null
+          baseline: Json | null
+          closure: Json | null
+          created_at: string
+          created_by: string
+          expected_end: string | null
+          group_id: string
+          id: string
+          label: string
+          person_id: string
+          reason: string | null
+          start_date: string
+          status: string
+        }
+        Insert: {
+          actual_end?: string | null
+          baseline?: Json | null
+          closure?: Json | null
+          created_at?: string
+          created_by: string
+          expected_end?: string | null
+          group_id: string
+          id?: string
+          label: string
+          person_id: string
+          reason?: string | null
+          start_date: string
+          status?: string
+        }
+        Update: {
+          actual_end?: string | null
+          baseline?: Json | null
+          closure?: Json | null
+          created_at?: string
+          created_by?: string
+          expected_end?: string | null
+          group_id?: string
+          id?: string
+          label?: string
+          person_id?: string
+          reason?: string | null
+          start_date?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_cycles_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_cycles_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
             referencedColumns: ["id"]
           },
         ]
