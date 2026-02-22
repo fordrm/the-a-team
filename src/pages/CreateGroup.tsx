@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { signOutAndReset } from "@/lib/signOut";
@@ -15,6 +15,16 @@ export default function CreateGroup() {
   const { toast } = useToast();
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Redirect supported persons away from this page
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("persons").select("id").eq("user_id", user.id).limit(1).then(({ data }) => {
+      if (data && data.length > 0) {
+        navigate("/person-portal", { replace: true });
+      }
+    });
+  }, [user, navigate]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

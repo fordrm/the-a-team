@@ -20,44 +20,40 @@ export default function Index() {
       return;
     }
 
-    const checkAccess = async () => {
-      // Check if user is a supported person (has a persons row with their user_id)
-      const { data: personRows } = await supabase
-        .from("persons")
-        .select("id")
-        .eq("user_id", user.id);
+    const routeUser = async () => {
+      // Query all three in parallel
+      const [coordRes, personRes, memberRes] = await Promise.all([
+        supabase.from("groups").select("id").eq("created_by_user_id", user.id).limit(1),
+        supabase.from("persons").select("id").eq("user_id", user.id).limit(1),
+        supabase.from("group_memberships").select("group_id").eq("user_id", user.id).eq("is_active", true),
+      ]);
 
-      if (personRows && personRows.length > 0) {
-        // Supported person → go to portal
+      const coordinatorGroups = coordRes.data ?? [];
+      const supportedPerson = personRes.data ?? [];
+      const memberships = (memberRes.data ?? []) as MembershipRow[];
+
+      if (coordinatorGroups.length > 0) {
+        navigate(`/group/${coordinatorGroups[0].id}`, { replace: true });
+      } else if (supportedPerson.length > 0) {
         navigate("/person-portal", { replace: true });
-        return;
-      }
-
-      // Check group memberships
-      const { data } = await supabase
-        .from("group_memberships")
-        .select("group_id")
-        .eq("user_id", user.id)
-        .eq("is_active", true);
-
-      const memberships = (data ?? []) as MembershipRow[];
-      if (memberships.length === 0) {
-        navigate("/create-group", { replace: true });
-      } else if (memberships.length === 1) {
-        navigate(`/group/${memberships[0].group_id}`, { replace: true });
+      } else if (memberships.length > 0) {
+        if (memberships.length === 1) {
+          navigate(`/group/${memberships[0].group_id}`, { replace: true });
+        } else {
+          setChecking(false); // show picker
+        }
       } else {
-        setChecking(false);
+        navigate("/awaiting-approval", { replace: true });
       }
     };
 
-    checkAccess();
+    routeUser();
   }, [user, loading, navigate]);
 
   if (loading || checking) {
     return <div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Loading…</p></div>;
   }
 
-  // Multiple groups picker
   return <GroupPicker />;
 }
 
@@ -99,8 +95,7 @@ function GroupPicker() {
             </button>
           ))}
         </div>
-        <div className="flex justify-between">
-          <button onClick={() => navigate("/create-group")} className="text-sm text-primary hover:underline">+ New Group</button>
+        <div className="text-center">
           <button onClick={() => signOutAndReset()} className="text-sm text-muted-foreground hover:underline">Sign Out</button>
         </div>
       </div>
