@@ -143,18 +143,19 @@ export default function GroupDashboard() {
           </Button>
         </div>
 
-        <Tabs defaultValue="members">
+        <Tabs defaultValue={isSubjectPerson ? "agreements" : "members"}>
           <TabsList className="w-full">
-            <TabsTrigger value="members" className="flex-1">Members</TabsTrigger>
-            <TabsTrigger value="persons" className="flex-1">Persons</TabsTrigger>
+            {!isSubjectPerson && <TabsTrigger value="members" className="flex-1">Members</TabsTrigger>}
+            {!isSubjectPerson && <TabsTrigger value="persons" className="flex-1">Persons</TabsTrigger>}
             <TabsTrigger value="agreements" className="flex-1">Agreements</TabsTrigger>
-            <TabsTrigger value="timeline" className="flex-1">Timeline</TabsTrigger>
+            <TabsTrigger value="timeline" className="flex-1">{isSubjectPerson ? "Shared Notes" : "Timeline"}</TabsTrigger>
             {!isSubjectPerson && <TabsTrigger value="contradictions" className="flex-1">Conflicts</TabsTrigger>}
-            <TabsTrigger value="interventions" className="flex-1">Interventions</TabsTrigger>
+            {!isSubjectPerson && <TabsTrigger value="interventions" className="flex-1">Interventions</TabsTrigger>}
             {!isSubjectPerson && <TabsTrigger value="alerts" className="flex-1">Alerts</TabsTrigger>}
           </TabsList>
 
           {/* Members Tab */}
+          {!isSubjectPerson && (
           <TabsContent value="members">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -192,8 +193,10 @@ export default function GroupDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
+          )}
 
           {/* Persons Tab */}
+          {!isSubjectPerson && (
           <TabsContent value="persons">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -236,6 +239,7 @@ export default function GroupDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
+          )}
 
           {/* Agreements Tab */}
           <TabsContent value="agreements">
@@ -317,6 +321,7 @@ export default function GroupDashboard() {
           )}
 
           {/* Interventions Tab */}
+          {!isSubjectPerson && (
           <TabsContent value="interventions">
             {interventionView.type === "list" && (
               <InterventionsList
@@ -344,6 +349,7 @@ export default function GroupDashboard() {
               />
             )}
           </TabsContent>
+          )}
 
           {/* Alerts Tab */}
           {!isSubjectPerson && (

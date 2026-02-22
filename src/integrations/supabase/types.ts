@@ -534,6 +534,98 @@ export type Database = {
           },
         ]
       }
+      person_access_requests: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          person_label: string
+          requester_user_id: string
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          person_label: string
+          requester_user_id: string
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          person_label?: string
+          requester_user_id?: string
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "person_access_requests_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      person_consents: {
+        Row: {
+          consent_notes: string | null
+          consent_scope: string
+          created_at: string
+          created_by_user_id: string
+          effective_at: string
+          group_id: string
+          id: string
+          revoked_at: string | null
+          subject_person_id: string
+        }
+        Insert: {
+          consent_notes?: string | null
+          consent_scope?: string
+          created_at?: string
+          created_by_user_id: string
+          effective_at?: string
+          group_id: string
+          id?: string
+          revoked_at?: string | null
+          subject_person_id: string
+        }
+        Update: {
+          consent_notes?: string | null
+          consent_scope?: string
+          created_at?: string
+          created_by_user_id?: string
+          effective_at?: string
+          group_id?: string
+          id?: string
+          revoked_at?: string | null
+          subject_person_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "person_consents_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_consents_subject_person_id_fkey"
+            columns: ["subject_person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       persons: {
         Row: {
           created_at: string
@@ -574,6 +666,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_supported_person: {
+        Args: {
+          p_group_id: string
+          p_request_id: string
+          p_subject_user_id: string
+        }
+        Returns: string
+      }
       bootstrap_create_group: { Args: { p_name: string }; Returns: string }
       is_group_coordinator: {
         Args: { _group_id: string; _user_id: string }
@@ -581,6 +681,10 @@ export type Database = {
       }
       is_group_member: {
         Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_subject_person: {
+        Args: { _person_id: string; _user_id: string }
         Returns: boolean
       }
       whoami: { Args: never; Returns: string }
