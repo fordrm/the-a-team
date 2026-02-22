@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle } from "lucide-react";
+import { Users, UserPlus, Heart, LogOut, Clock, AlertTriangle, Activity } from "lucide-react";
 import Timeline from "@/components/timeline/Timeline";
 import AddNote from "@/components/timeline/AddNote";
 import AgreementsList from "@/components/agreements/AgreementsList";
@@ -18,6 +18,9 @@ import AgreementDetail from "@/components/agreements/AgreementDetail";
 import ContradictionsList from "@/components/contradictions/ContradictionsList";
 import CreateContradiction from "@/components/contradictions/CreateContradiction";
 import ContradictionDetail from "@/components/contradictions/ContradictionDetail";
+import InterventionsList from "@/components/interventions/InterventionsList";
+import CreateIntervention from "@/components/interventions/CreateIntervention";
+import InterventionDetail from "@/components/interventions/InterventionDetail";
 
 interface GroupRow { id: string; name: string; }
 interface MemberRow { id: string; user_id: string; role: string; display_name: string | null; is_active: boolean; }
@@ -26,6 +29,7 @@ interface PersonRow { id: string; label: string; is_primary: boolean; user_id: s
 type AgreementView = { type: "list" } | { type: "create" } | { type: "detail"; agreementId: string };
 type TimelineView = { type: "list" } | { type: "add" };
 type ContradictionView = { type: "list" } | { type: "create" } | { type: "detail"; id: string };
+type InterventionView = { type: "list" } | { type: "create" } | { type: "detail"; id: string };
 
 export default function GroupDashboard() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -43,6 +47,8 @@ export default function GroupDashboard() {
   const [timelineKey, setTimelineKey] = useState(0);
   const [contradictionView, setContradictionView] = useState<ContradictionView>({ type: "list" });
   const [contradictionKey, setContradictionKey] = useState(0);
+  const [interventionView, setInterventionView] = useState<InterventionView>({ type: "list" });
+  const [interventionKey, setInterventionKey] = useState(0);
 
   // invite form
   const [inviteUserId, setInviteUserId] = useState("");
@@ -139,6 +145,7 @@ export default function GroupDashboard() {
             <TabsTrigger value="agreements" className="flex-1">Agreements</TabsTrigger>
             <TabsTrigger value="timeline" className="flex-1">Timeline</TabsTrigger>
             {!isSubjectPerson && <TabsTrigger value="contradictions" className="flex-1">Conflicts</TabsTrigger>}
+            <TabsTrigger value="interventions" className="flex-1">Interventions</TabsTrigger>
           </TabsList>
 
           {/* Members Tab */}
@@ -302,6 +309,35 @@ export default function GroupDashboard() {
               )}
             </TabsContent>
           )}
+
+          {/* Interventions Tab */}
+          <TabsContent value="interventions">
+            {interventionView.type === "list" && (
+              <InterventionsList
+                key={interventionKey}
+                groupId={groupId!}
+                personId={activePersonId}
+                onCreateNew={() => setInterventionView({ type: "create" })}
+                onView={(id) => setInterventionView({ type: "detail", id })}
+              />
+            )}
+            {interventionView.type === "create" && activePersonId && (
+              <CreateIntervention
+                groupId={groupId!}
+                personId={activePersonId}
+                onBack={() => setInterventionView({ type: "list" })}
+                onCreated={() => { setInterventionView({ type: "list" }); setInterventionKey(k => k + 1); }}
+              />
+            )}
+            {interventionView.type === "detail" && (
+              <InterventionDetail
+                interventionId={interventionView.id}
+                groupId={groupId!}
+                isCoordinator={isCoordinator}
+                onBack={() => setInterventionView({ type: "list" })}
+              />
+            )}
+          </TabsContent>
         </Tabs>
       </div>
     </div>
