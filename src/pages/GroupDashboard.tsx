@@ -58,7 +58,7 @@ export default function GroupDashboard() {
   const [alertKey, setAlertKey] = useState(0);
 
   // invite form
-  const [inviteUserId, setInviteUserId] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [inviteDisplayName, setInviteDisplayName] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -95,13 +95,16 @@ export default function GroupDashboard() {
     if (!groupId) return;
     setInviting(true);
     try {
-      const { error } = await supabase.from("group_memberships").insert({
-        group_id: groupId, user_id: inviteUserId, role: inviteRole,
-        display_name: inviteDisplayName || null, is_active: true, capabilities: {},
+      const { data, error } = await supabase.rpc("invite_member_by_email", {
+        p_group_id: groupId,
+        p_email: inviteEmail,
+        p_role: inviteRole,
+        p_display_name: inviteDisplayName || null,
       });
       if (error) throw error;
-      toast({ title: "Member added" });
-      setInviteOpen(false); setInviteUserId(""); setInviteRole("member"); setInviteDisplayName("");
+      const result = data as { status: string; message: string };
+      toast({ title: result.status === "member_added" ? "Member added" : "Invite sent", description: result.message });
+      setInviteOpen(false); setInviteEmail(""); setInviteRole("member"); setInviteDisplayName("");
       fetchData();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -189,10 +192,20 @@ export default function GroupDashboard() {
                   <DialogContent>
                     <DialogHeader><DialogTitle>Invite Member</DialogTitle></DialogHeader>
                     <form onSubmit={handleInvite} className="space-y-4">
-                      <div className="space-y-2"><Label>User ID (UUID)</Label><Input required value={inviteUserId} onChange={e => setInviteUserId(e.target.value)} placeholder="paste user UUID" /></div>
-                      <div className="space-y-2"><Label>Role</Label><Input required value={inviteRole} onChange={e => setInviteRole(e.target.value)} placeholder="member" /></div>
+                      <div className="space-y-2"><Label>Email</Label><Input required type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="name@example.com" /></div>
+                      <div className="space-y-2">
+                        <Label>Role</Label>
+                        <Select value={inviteRole} onValueChange={setInviteRole}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-background z-50">
+                            <SelectItem value="member">Member</SelectItem>
+                            <SelectItem value="supporter">Supporter</SelectItem>
+                            <SelectItem value="coordinator">Coordinator</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="space-y-2"><Label>Display Name (optional)</Label><Input value={inviteDisplayName} onChange={e => setInviteDisplayName(e.target.value)} /></div>
-                      <Button type="submit" className="w-full" disabled={inviting}>{inviting ? "Adding…" : "Add Member"}</Button>
+                      <Button type="submit" className="w-full" disabled={inviting}>{inviting ? "Sending…" : "Send Invite"}</Button>
                     </form>
                   </DialogContent>
                 </Dialog>
