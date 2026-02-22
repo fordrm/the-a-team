@@ -30,6 +30,9 @@ import InterventionDetail from "@/components/interventions/InterventionDetail";
 import AlertsList from "@/components/alerts/AlertsList";
 import AlertDetail from "@/components/alerts/AlertDetail";
 import IndicatorTrend from "@/components/dashboard/IndicatorTrend";
+import TrackingCyclesList from "@/components/cycles/TrackingCyclesList";
+import CycleBanner from "@/components/cycles/CycleBanner";
+import { CalendarRange } from "lucide-react";
 
 interface GroupRow { id: string; name: string; }
 interface MemberRow { id: string; user_id: string; role: string; display_name: string | null; is_active: boolean; }
@@ -309,7 +312,7 @@ export default function GroupDashboard() {
   };
 
   // Tabs that need a person selected
-  const personRequiredTabs = ["agreements", "timeline", "contradictions", "interventions", "alerts"];
+  const personRequiredTabs = ["agreements", "timeline", "contradictions", "interventions", "alerts", "cycles"];
   const needsPersonSelector = !isSubjectPerson && personRequiredTabs.includes(activeTab);
 
   return (
@@ -361,6 +364,11 @@ export default function GroupDashboard() {
           </Card>
         )}
 
+        {/* Active Cycle Banner */}
+        {activePersonId && !isSubjectPerson && (
+          <CycleBanner groupId={groupId!} personId={activePersonId} />
+        )}
+
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           {/* Mobile: dropdown */}
           <div className="sm:hidden">
@@ -376,6 +384,7 @@ export default function GroupDashboard() {
                 {!isSubjectPerson && <SelectItem value="contradictions"><span className="flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Conflicts</span></SelectItem>}
                 {!isSubjectPerson && <SelectItem value="interventions"><span className="flex items-center gap-2"><Activity className="h-4 w-4" /> Interventions</span></SelectItem>}
                 {!isSubjectPerson && <SelectItem value="alerts"><span className="flex items-center gap-2"><Bell className="h-4 w-4" /> Alerts</span></SelectItem>}
+                {!isSubjectPerson && <SelectItem value="cycles"><span className="flex items-center gap-2"><CalendarRange className="h-4 w-4" /> Cycles</span></SelectItem>}
               </SelectContent>
             </Select>
           </div>
@@ -388,6 +397,7 @@ export default function GroupDashboard() {
             {!isSubjectPerson && <TabsTrigger value="contradictions" className="flex-1">Conflicts</TabsTrigger>}
             {!isSubjectPerson && <TabsTrigger value="interventions" className="flex-1">Interventions</TabsTrigger>}
             {!isSubjectPerson && <TabsTrigger value="alerts" className="flex-1">Alerts</TabsTrigger>}
+            {!isSubjectPerson && <TabsTrigger value="cycles" className="flex-1">Cycles</TabsTrigger>}
           </TabsList>
 
           {/* Members Tab */}
@@ -759,6 +769,18 @@ export default function GroupDashboard() {
               />
             )}
           </TabsContent>
+          )}
+
+          {/* Cycles Tab */}
+          {!isSubjectPerson && (
+            <TabsContent value="cycles">
+              <TrackingCyclesList
+                groupId={groupId!}
+                personId={activePersonId}
+                personLabel={activePersonLabel}
+                isCoordinator={isCoordinator}
+              />
+            </TabsContent>
           )}
 
           {/* Alerts Tab */}
