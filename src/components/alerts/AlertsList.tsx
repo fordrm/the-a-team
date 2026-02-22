@@ -27,7 +27,7 @@ interface Props {
 
 const STATUSES = ["all", "open", "acknowledged", "resolved", "dismissed"] as const;
 const SEVERITIES = ["all", "tier1", "tier2", "tier3", "tier4"] as const;
-const TYPES = ["all", "contradiction_opened", "agreement_modified", "agreement_declined", "intervention_stopped", "pattern_signal"] as const;
+const TYPES = ["all", "contradiction_opened", "agreement_modified", "agreement_declined", "agreement_updated", "intervention_stopped", "pattern_signal"] as const;
 
 const severityColor = (s: string): "destructive" | "default" | "secondary" | "outline" => {
   switch (s) {

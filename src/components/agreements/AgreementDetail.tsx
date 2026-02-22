@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Check, Pencil, ChevronDown, History } from "lucide-react";
+import { ArrowLeft, Check, Pencil, ChevronDown, History, X } from "lucide-react";
 import { checkPermission } from "@/lib/checkPermission";
 
 interface VersionFields {
@@ -39,6 +39,16 @@ interface Props {
   onBack: () => void;
 }
 
+function getStatusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+  switch (status) {
+    case "accepted": return "default";
+    case "proposed": return "secondary";
+    case "declined": return "destructive";
+    case "withdrawn": return "outline";
+    default: return "secondary";
+  }
+}
+
 export default function AgreementDetail({ agreementId, groupId, onBack }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -58,7 +68,7 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
 
   // propose update mode (coordinator/supporter)
   const [proposing, setProposing] = useState(false);
-  const [proposeBody, setProposeBody] = useState("");
+  const [proposeFields, setProposeFields] = useState<VersionFields>({});
 
   // version history
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -151,6 +161,9 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
       }).select("id").single();
       if (error) throw error;
 
+      // Update agreement status to declined
+      await supabase.from("agreements").update({ status: "declined" }).eq("id", agreementId);
+
       if (acc) {
         await createAlertIfNeeded({
           group_id: groupId,
@@ -230,6 +243,9 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
   const olderVersions = allVersions.slice(1);
   const fields = latestVersion.fields as VersionFields;
   const hasAcceptance = acceptances.some(a => a.agreement_version_id === latestVersion.id && a.status === "accepted");
+  const hasModifiedResponse = acceptances.some(a => a.agreement_version_id === latestVersion.id && a.status === "modified");
+  const hasAnyResponse = acceptances.some(a => a.agreement_version_id === latestVersion.id);
+  const isTerminal = agreement.status === "declined" || agreement.status === "withdrawn";
 
   const fieldEntries: { label: string; key: keyof VersionFields }[] = [
     { label: "Terms", key: "body" },
@@ -252,7 +268,7 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
         </Button>
         <div className="flex items-center gap-2">
           <CardTitle className="text-lg">{fields.title || "Untitled"}</CardTitle>
-          <Badge variant={agreement.status === "accepted" ? "default" : "secondary"}>{agreement.status}</Badge>
+          <Badge variant={getStatusVariant(agreement.status)}>{agreement.status}</Badge>
           <span className="text-xs text-muted-foreground">v{latestVersion.version_num}</span>
         </div>
       </CardHeader>
@@ -315,7 +331,7 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
             <ul className="space-y-1">
               {acceptances.map(a => (
                 <li key={a.id} className="flex items-center gap-2 text-xs">
-                  <Badge variant={a.status === "accepted" ? "default" : "outline"} className="text-xs">{a.status}</Badge>
+                  <Badge variant={a.status === "accepted" ? "default" : a.status === "declined" ? "destructive" : "outline"} className="text-xs">{a.status}</Badge>
                   {a.message && <span className="text-muted-foreground">— {a.message}</span>}
                 </li>
               ))}
@@ -324,7 +340,7 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
         )}
 
         {/* Actions for supported person */}
-        {isSubjectPerson && agreement.status === "proposed" && !hasAcceptance && !modifying && (
+        {isSubjectPerson && agreement.status === "proposed" && !hasAnyResponse && !modifying && (
           <div className="flex gap-2 border-t pt-3">
             <Button size="sm" onClick={handleAccept} disabled={submitting}>
               <Check className="mr-1 h-4 w-4" /> Accept
@@ -357,11 +373,63 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
           </div>
         )}
 
+        {/* Coordinator: accept modification from supported person */}
+        {isCoordinator && !isSubjectPerson && hasModifiedResponse && !proposing && !isTerminal && (
+          <div className="border-t pt-3 space-y-2">
+            <p className="text-sm text-muted-foreground">The supported person proposed a modification to this agreement.</p>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={async () => {
+                setSubmitting(true);
+                try {
+                  await supabase.from("agreements").update({
+                    current_version_id: latestVersion.id,
+                    status: "accepted",
+                  }).eq("id", agreementId);
+                  toast({ title: "Modification accepted" });
+                  fetchAll();
+                } catch (err: any) {
+                  toast({ title: "Error", description: err.message, variant: "destructive" });
+                } finally { setSubmitting(false); }
+              }} disabled={submitting}>
+                <Check className="mr-1 h-4 w-4" /> Accept Modification
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => {
+                setProposeFields({ ...fields });
+                setProposing(true);
+              }}>
+                <Pencil className="mr-1 h-4 w-4" /> Counter-Propose
+              </Button>
+            </div>
+            {/* Revert to a previous version */}
+            {olderVersions.length > 0 && (
+              <div className="mt-2">
+                <p className="text-xs text-muted-foreground mb-1">Or revert to a previous version:</p>
+                <div className="flex flex-wrap gap-1">
+                  {olderVersions.map(v => (
+                    <Button
+                      key={v.id}
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs h-7"
+                      onClick={() => {
+                        setProposeFields({ ...(v.fields as VersionFields) });
+                        setProposing(true);
+                      }}
+                    >
+                      Revert to v{v.version_num}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Coordinator/Supporter: Propose Update */}
-        {!isSubjectPerson && !proposing && (
+        {!isSubjectPerson && !proposing && !isTerminal && !hasModifiedResponse && (
           <div className="border-t pt-3">
             <Button size="sm" variant="outline" onClick={() => {
-              setProposeBody(fields.body || "");
+              setProposeFields({ ...fields });
               setProposing(true);
             }}>
               <Pencil className="mr-1 h-4 w-4" /> Propose Update
@@ -369,25 +437,84 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
           </div>
         )}
 
-        {/* Propose Update form */}
+        {/* Coordinator: Re-open declined agreement */}
+        {isCoordinator && !isSubjectPerson && agreement.status === "declined" && !proposing && (
+          <div className="border-t pt-3 space-y-2">
+            <p className="text-sm text-muted-foreground">This agreement was declined. You can propose a revised version to re-open negotiation.</p>
+            <Button size="sm" variant="outline" onClick={() => {
+              setProposeFields({ ...fields });
+              setProposing(true);
+            }}>
+              <Pencil className="mr-1 h-4 w-4" /> Propose Revised Version
+            </Button>
+          </div>
+        )}
+
+        {/* Coordinator: Withdraw agreement */}
+        {isCoordinator && !isSubjectPerson && !isTerminal && agreement.status !== "accepted" && (
+          <div className="border-t pt-3">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={async () => {
+                setSubmitting(true);
+                try {
+                  await supabase.from("agreements").update({ status: "withdrawn" }).eq("id", agreementId);
+                  await createAlertIfNeeded({
+                    group_id: groupId,
+                    subject_person_id: agreement.subject_person_id,
+                    type: "agreement_declined",
+                    severity: "tier3",
+                    title: `Agreement withdrawn: ${fields.title || "Untitled"}`,
+                    source_table: "agreements",
+                    source_id: agreementId,
+                  });
+                  toast({ title: "Agreement withdrawn" });
+                  fetchAll();
+                } catch (err: any) {
+                  toast({ title: "Error", description: err.message, variant: "destructive" });
+                } finally { setSubmitting(false); }
+              }}
+              disabled={submitting}
+            >
+              <X className="mr-1 h-4 w-4" /> Withdraw Agreement
+            </Button>
+          </div>
+        )}
+
+        {/* Full counter-propose / propose update form */}
         {proposing && (
           <form onSubmit={async (e) => {
             e.preventDefault();
             if (!user) return;
             setSubmitting(true);
             try {
-              const perms = await checkPermission(user.id, groupId);
-              if (!perms.isMember) {
-                toast({ title: "Permission denied", description: "Your access may have changed. Please refresh.", variant: "destructive" });
-                setSubmitting(false);
-                return;
+              const nextVersionNum = latestVersion.version_num + 1;
+              const { error: vErr } = await supabase.from("agreement_versions").insert([{
+                agreement_id: agreementId,
+                group_id: groupId,
+                proposed_by_user_id: user.id,
+                version_num: nextVersionNum,
+                fields: proposeFields as any,
+              }]);
+              if (vErr) throw vErr;
+
+              // Re-open if previously declined or accepted
+              if (agreement.status === "declined" || agreement.status === "accepted") {
+                await supabase.from("agreements").update({ status: "proposed" }).eq("id", agreementId);
               }
-              const { error } = await supabase.rpc("propose_agreement_version", {
-                p_agreement_id: agreementId,
-                p_group_id: groupId,
-                p_body: proposeBody,
+
+              await createAlertIfNeeded({
+                group_id: groupId,
+                subject_person_id: agreement.subject_person_id,
+                type: "agreement_updated",
+                severity: "tier3",
+                title: `New proposal on: ${proposeFields.title || fields.title || "Untitled"}`,
+                source_table: "agreements",
+                source_id: agreementId,
               });
-              if (error) throw error;
+
               toast({ title: "Update proposed" });
               setProposing(false);
               fetchAll();
@@ -397,24 +524,38 @@ export default function AgreementDetail({ agreementId, groupId, onBack }: Props)
           }} className="space-y-3 border-t pt-3">
             <p className="text-sm font-medium">Propose updated terms</p>
             <div className="space-y-1">
-              <Label className="text-xs">Updated Terms</Label>
-              <Textarea
-                required
-                value={proposeBody}
-                onChange={e => setProposeBody(e.target.value)}
-                rows={6}
+              <Label className="text-xs">Title</Label>
+              <Input
+                value={proposeFields.title || ""}
+                onChange={e => setProposeFields(f => ({ ...f, title: e.target.value }))}
               />
             </div>
+            {fieldEntries.map(({ label, key }) => (
+              <div key={key} className="space-y-1">
+                <Label className="text-xs">{label}</Label>
+                {key === "body" || key === "i_will_statement" || key === "support_needed" ? (
+                  <Textarea
+                    value={(proposeFields[key] as string) || ""}
+                    onChange={e => setProposeFields(f => ({ ...f, [key]: e.target.value }))}
+                  />
+                ) : (
+                  <Input
+                    value={(proposeFields[key] as string) || ""}
+                    onChange={e => setProposeFields(f => ({ ...f, [key]: e.target.value }))}
+                  />
+                )}
+              </div>
+            ))}
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={submitting}>
-                {submitting ? "Submitting…" : "Submit Update"}
+                {submitting ? "Submitting…" : "Submit Proposal"}
               </Button>
               <Button type="button" size="sm" variant="ghost" onClick={() => setProposing(false)}>Cancel</Button>
             </div>
           </form>
         )}
 
-        {/* Modify form */}
+        {/* Modify form (supported person) */}
         {modifying && (
           <form onSubmit={handleModify} className="space-y-3 border-t pt-3">
             <p className="text-sm font-medium">Propose modifications</p>

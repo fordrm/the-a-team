@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Clock, Plus, ChevronDown, Eye, EyeOff, Shield, Activity, Pin } from "lucide-react";
+import { Clock, Plus, ChevronDown, Eye, EyeOff, Shield, Activity, Pin, FileText, Check, Pencil, X, XCircle } from "lucide-react";
 import { INDICATOR_LABEL_MAP, ALL_INDICATORS } from "@/lib/indicators";
 
 interface NoteRow {
@@ -33,9 +33,20 @@ interface InterventionRow {
   created_by_user_id: string;
 }
 
+interface AgreementEventRow {
+  id: string;
+  agreement_id: string;
+  status: string;
+  message: string | null;
+  person_user_id: string;
+  created_at: string;
+  agreement_title: string;
+}
+
 type TimelineItem =
   | { kind: "note"; date: string; data: NoteRow }
-  | { kind: "intervention"; date: string; data: InterventionRow };
+  | { kind: "intervention"; date: string; data: InterventionRow }
+  | { kind: "agreement_event"; date: string; data: AgreementEventRow };
 
 interface Props {
   groupId: string;
@@ -89,6 +100,14 @@ function sortItems(items: TimelineItem[]): TimelineItem[] {
   });
 }
 
+const AGREEMENT_STATUS_CONFIG: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
+  created: { icon: <FileText className="h-3 w-3 text-blue-500" />, label: "Agreement created", color: "border-blue-200 bg-blue-50" },
+  accepted: { icon: <Check className="h-3 w-3 text-green-500" />, label: "Agreement accepted", color: "border-green-200 bg-green-50" },
+  modified: { icon: <Pencil className="h-3 w-3 text-amber-500" />, label: "Modification proposed", color: "border-amber-200 bg-amber-50" },
+  declined: { icon: <X className="h-3 w-3 text-red-500" />, label: "Agreement declined", color: "border-red-200 bg-red-50" },
+  withdrawn: { icon: <XCircle className="h-3 w-3 text-gray-500" />, label: "Agreement withdrawn", color: "border-gray-200 bg-gray-50" },
+};
+
 export default function Timeline({ groupId, personId, members, onAddNote, isGroupMember = true }: Props) {
   const [items, setItems] = useState<TimelineItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,7 +122,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
     if (!personId) { setItems([]); setLoading(false); return; }
     const fetchAll = async () => {
       setLoading(true);
-      const [notesRes, intRes] = await Promise.all([
+      const [notesRes, intRes, accRes, agreeRes] = await Promise.all([
         supabase
           .from("contact_notes")
           .select("id, author_user_id, visibility_tier, channel, occurred_at, indicators, body, created_at, pinned")
@@ -113,6 +132,15 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
         supabase
           .from("interventions")
           .select("id, title, type, status, visibility_tier, start_at, created_at, created_by_user_id")
+          .eq("group_id", groupId)
+          .eq("subject_person_id", personId),
+        supabase
+          .from("agreement_acceptances")
+          .select("id, agreement_id, status, message, person_user_id, created_at")
+          .eq("group_id", groupId),
+        supabase
+          .from("agreements")
+          .select("id, created_at, created_by_user_id, status")
           .eq("group_id", groupId)
           .eq("subject_person_id", personId),
       ]);
@@ -129,7 +157,55 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
         data: i,
       }));
 
-      setItems(sortItems([...noteItems, ...intItems]));
+      // Build agreement title map
+      const agreementIds = (agreeRes.data ?? []).map((a: any) => a.id);
+      let titleMap: Record<string, string> = {};
+      if (agreementIds.length > 0) {
+        const { data: versionsData } = await supabase
+          .from("agreement_versions")
+          .select("agreement_id, fields")
+          .in("agreement_id", agreementIds)
+          .order("version_num", { ascending: false });
+        (versionsData ?? []).forEach((v: any) => {
+          if (!titleMap[v.agreement_id]) {
+            titleMap[v.agreement_id] = v.fields?.title || "Untitled Agreement";
+          }
+        });
+      }
+
+      // Filter acceptances to only those for this person's agreements
+      const agreementIdSet = new Set(agreementIds);
+      const rawAcceptances = (accRes.data ?? []).filter((a: any) => agreementIdSet.has(a.agreement_id));
+
+      const acceptanceItems: TimelineItem[] = rawAcceptances.map((a: any) => ({
+        kind: "agreement_event" as const,
+        date: a.created_at,
+        data: {
+          id: a.id,
+          agreement_id: a.agreement_id,
+          status: a.status,
+          message: a.message,
+          person_user_id: a.person_user_id,
+          created_at: a.created_at,
+          agreement_title: titleMap[a.agreement_id] || "Agreement",
+        } as AgreementEventRow,
+      }));
+
+      const creationItems: TimelineItem[] = (agreeRes.data ?? []).map((a: any) => ({
+        kind: "agreement_event" as const,
+        date: a.created_at,
+        data: {
+          id: `created-${a.id}`,
+          agreement_id: a.id,
+          status: "created",
+          message: null,
+          person_user_id: a.created_by_user_id,
+          created_at: a.created_at,
+          agreement_title: titleMap[a.id] || "Agreement",
+        } as AgreementEventRow,
+      }));
+
+      setItems(sortItems([...noteItems, ...intItems, ...acceptanceItems, ...creationItems]));
       setLoading(false);
     };
     fetchAll();
@@ -139,6 +215,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
     return items.filter(item => {
       if (filterType === "notes" && item.kind !== "note") return false;
       if (filterType === "interventions" && item.kind !== "intervention") return false;
+      if (filterType === "agreements" && item.kind !== "agreement_event") return false;
 
       if (item.kind === "note") {
         const n = item.data as NoteRow;
@@ -208,6 +285,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
               <SelectItem value="all">All types</SelectItem>
               <SelectItem value="notes">Notes only</SelectItem>
               <SelectItem value="interventions">Interventions</SelectItem>
+              <SelectItem value="agreements">Agreements</SelectItem>
             </SelectContent>
           </Select>
 
@@ -266,7 +344,6 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                   return (
                     <li key={`note-${n.id}`} className={`rounded-md border p-3 space-y-2 ${n.pinned ? "border-primary/30 bg-primary/5" : ""}`}>
                       <div className="flex items-start gap-3">
-                        {/* Avatar circle */}
                         <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${getAvatarColor(n.author_user_id)}`}>
                           {getInitials(name)}
                         </div>
@@ -321,7 +398,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                       )}
                     </li>
                   );
-                } else {
+                } else if (item.kind === "intervention") {
                   const i = item.data;
                   return (
                     <li key={`int-${i.id}`} className="rounded-md border border-primary/20 bg-primary/5 p-3 space-y-1">
@@ -344,7 +421,30 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                       <p className="text-sm font-medium">{i.title}</p>
                     </li>
                   );
+                } else if (item.kind === "agreement_event") {
+                  const e = item.data as AgreementEventRow;
+                  const config = AGREEMENT_STATUS_CONFIG[e.status] || AGREEMENT_STATUS_CONFIG.created;
+                  return (
+                    <li key={`agree-${e.id}`} className={`rounded-md border p-3 space-y-1 ${config.color}`}>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          {config.icon}
+                          <span className="font-medium text-foreground">{config.label}</span>
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>{formatRelativeTime(e.created_at)}</span>
+                          </TooltipTrigger>
+                          <TooltipContent>{formatFullDateTime(e.created_at)}</TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <p className="text-sm font-medium">{e.agreement_title}</p>
+                      {e.message && <p className="text-sm text-muted-foreground italic">"{e.message}"</p>}
+                      <p className="text-xs text-muted-foreground">by {authorName(e.person_user_id)}</p>
+                    </li>
+                  );
                 }
+                return null;
               })}
             </ul>
           </TooltipProvider>
