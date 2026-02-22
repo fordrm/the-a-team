@@ -6,27 +6,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TrendingUp } from "lucide-react";
 import { INDICATOR_LABEL_MAP, INDICATOR_CATEGORIES } from "@/lib/indicators";
 
-interface Props {
-  groupId: string;
-  personId: string | null;
-}
+const CATEGORY_BAR_COLORS: Record<string, string> = {
+  psychosis: "bg-purple-400",
+  mood_manic: "bg-orange-400",
+  mood_depressive: "bg-blue-400",
+  functional: "bg-amber-400",
+  relational: "bg-red-400",
+};
 
-function getCategoryTextColor(key: string): string {
+function getBarColor(key: string): string {
   for (const cat of INDICATOR_CATEGORIES) {
     if (cat.indicators.some(i => i.key === key)) {
-      return cat.color;
-    }
-  }
-  return "text-muted-foreground";
-}
-
-function getCategoryBgColor(key: string): string {
-  for (const cat of INDICATOR_CATEGORIES) {
-    if (cat.indicators.some(i => i.key === key)) {
-      return cat.color.replace("text-", "bg-").replace("500", "100");
+      return CATEGORY_BAR_COLORS[cat.id] || "bg-muted";
     }
   }
   return "bg-muted";
+}
+
+interface Props {
+  groupId: string;
+  personId: string | null;
 }
 
 export default function IndicatorTrend({ groupId, personId }: Props) {
@@ -110,7 +109,7 @@ export default function IndicatorTrend({ groupId, personId }: Props) {
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${getCategoryBgColor(key)} opacity-70`}
+                      className={`h-full rounded-full ${getBarColor(key)} opacity-70`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
