@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,14 +59,13 @@ export default function GroupDashboard() {
 
   // invite form
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("member");
-  const [inviteDisplayName, setInviteDisplayName] = useState("");
+  const [inviteRole, setInviteRole] = useState("supporter");
+  const [invitePersonLabel, setInvitePersonLabel] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
 
   // person form
   const [personLabel, setPersonLabel] = useState("");
-  const [personUserId, setPersonUserId] = useState("");
   const [personOpen, setPersonOpen] = useState(false);
   const [creatingPerson, setCreatingPerson] = useState(false);
 
@@ -101,16 +100,24 @@ export default function GroupDashboard() {
     if (!groupId) return;
     setInviting(true);
     try {
-      const { data, error } = await supabase.rpc("invite_member_by_email", {
-        p_group_id: groupId,
-        p_email: inviteEmail,
-        p_role: inviteRole,
-        p_display_name: inviteDisplayName || null,
+      const { data, error } = await supabase.functions.invoke("invite-to-group", {
+        body: {
+          group_id: groupId,
+          email: inviteEmail,
+          role: inviteRole,
+          person_label: inviteRole === "supported_person" ? invitePersonLabel : null,
+        },
       });
       if (error) throw error;
-      const result = data as { status: string; message: string };
-      toast({ title: result.status === "member_added" ? "Member added" : "Invite sent", description: result.message });
-      setInviteOpen(false); setInviteEmail(""); setInviteRole("member"); setInviteDisplayName("");
+      if (data?.error) throw new Error(data.error);
+      const msg = data?.existing_user
+        ? `${inviteEmail} has been added to the group.`
+        : `Invite sent to ${inviteEmail}. They must set a password from the email to join.`;
+      toast({ title: "Invite sent", description: msg });
+      setInviteOpen(false);
+      setInviteEmail("");
+      setInviteRole("supporter");
+      setInvitePersonLabel("");
       fetchData();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -123,11 +130,11 @@ export default function GroupDashboard() {
     setCreatingPerson(true);
     try {
       const { error } = await supabase.from("persons").insert({
-        group_id: groupId, label: personLabel, user_id: personUserId || null, is_primary: true,
+        group_id: groupId, label: personLabel, user_id: null, is_primary: true,
       });
       if (error) throw error;
       toast({ title: "Person created" });
-      setPersonOpen(false); setPersonLabel(""); setPersonUserId("");
+      setPersonOpen(false); setPersonLabel("");
       fetchData();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -196,21 +203,29 @@ export default function GroupDashboard() {
                     <Button size="sm" variant="outline"><UserPlus className="mr-1 h-4 w-4" /> Invite</Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <DialogHeader><DialogTitle>Invite Member</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>Invite to Group</DialogTitle></DialogHeader>
                     <form onSubmit={handleInvite} className="space-y-4">
-                      <div className="space-y-2"><Label>Email</Label><Input required type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="name@example.com" /></div>
+                      <div className="space-y-2">
+                        <Label>Email</Label>
+                        <Input required type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="name@example.com" />
+                      </div>
                       <div className="space-y-2">
                         <Label>Role</Label>
                         <Select value={inviteRole} onValueChange={setInviteRole}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent className="bg-background z-50">
-                            <SelectItem value="member">Member</SelectItem>
-                            <SelectItem value="supporter">Supporter</SelectItem>
                             <SelectItem value="coordinator">Coordinator</SelectItem>
+                            <SelectItem value="supporter">Supporter</SelectItem>
+                            <SelectItem value="supported_person">Supported Person</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2"><Label>Display Name (optional)</Label><Input value={inviteDisplayName} onChange={e => setInviteDisplayName(e.target.value)} /></div>
+                      {inviteRole === "supported_person" && (
+                        <div className="space-y-2">
+                          <Label>Person Label</Label>
+                          <Input required value={invitePersonLabel} onChange={e => setInvitePersonLabel(e.target.value)} placeholder="e.g. Mom, Dad, Alex" />
+                        </div>
+                      )}
                       <Button type="submit" className="w-full" disabled={inviting}>{inviting ? "Sending…" : "Send Invite"}</Button>
                     </form>
                   </DialogContent>
@@ -300,7 +315,6 @@ export default function GroupDashboard() {
                     <DialogHeader><DialogTitle>Create Supported Person</DialogTitle></DialogHeader>
                     <form onSubmit={handleCreatePerson} className="space-y-4">
                       <div className="space-y-2"><Label>Label (name)</Label><Input required value={personLabel} onChange={e => setPersonLabel(e.target.value)} placeholder="e.g. Mom" /></div>
-                      <div className="space-y-2"><Label>User ID (optional)</Label><Input value={personUserId} onChange={e => setPersonUserId(e.target.value)} placeholder="UUID if they have an account" /></div>
                       <Button type="submit" className="w-full" disabled={creatingPerson}>{creatingPerson ? "Creating…" : "Create Person"}</Button>
                     </form>
                   </DialogContent>
@@ -464,8 +478,7 @@ export default function GroupDashboard() {
                     } else if (table === "interventions") {
                       setInterventionView({ type: "detail", id });
                     } else if (table === "agreement_acceptances") {
-                      // Navigate to agreements tab — source_id is the acceptance, but we'd need agreement_id
-                      // For now just go back to alerts
+                      // Navigate to agreements tab
                     }
                   }}
                 />

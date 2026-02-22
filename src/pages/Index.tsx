@@ -21,21 +21,21 @@ export default function Index() {
     }
 
     const routeUser = async () => {
-      // Query all three in parallel
-      const [coordRes, personRes, memberRes] = await Promise.all([
+      // Check persons first (supported person takes priority)
+      const [personRes, coordRes, memberRes] = await Promise.all([
+        supabase.from("persons").select("id, group_id").eq("user_id", user.id).limit(1),
         supabase.from("groups").select("id").eq("created_by_user_id", user.id).limit(1),
-        supabase.from("persons").select("id").eq("user_id", user.id).limit(1),
         supabase.from("group_memberships").select("group_id").eq("user_id", user.id).eq("is_active", true),
       ]);
 
-      const coordinatorGroups = coordRes.data ?? [];
       const supportedPerson = personRes.data ?? [];
+      const coordinatorGroups = coordRes.data ?? [];
       const memberships = (memberRes.data ?? []) as MembershipRow[];
 
-      if (coordinatorGroups.length > 0) {
-        navigate(`/group/${coordinatorGroups[0].id}`, { replace: true });
-      } else if (supportedPerson.length > 0) {
+      if (supportedPerson.length > 0) {
         navigate("/person-portal", { replace: true });
+      } else if (coordinatorGroups.length > 0) {
+        navigate(`/group/${coordinatorGroups[0].id}`, { replace: true });
       } else if (memberships.length > 0) {
         if (memberships.length === 1) {
           navigate(`/group/${memberships[0].group_id}`, { replace: true });
