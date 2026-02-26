@@ -225,7 +225,7 @@ export default function AgreementDetail({
         subject_person_id: agreement.subject_person_id,
         type: "agreement_declined",
         severity: "tier2",
-        title: `Agreement declined: ${fields.title || "Untitled"}`,
+        title: `Commitment declined: ${fields.title || "Untitled"}`,
         source_table: "agreement_acceptances",
         source_id: agreementId,
       });
@@ -253,7 +253,7 @@ export default function AgreementDetail({
         subject_person_id: agreement.subject_person_id,
         type: "agreement_declined",
         severity: "tier3",
-        title: `Agreement withdrawn: ${fields.title || "Untitled"}`,
+        title: `Commitment withdrawn: ${fields.title || "Untitled"}`,
         source_table: "agreements",
         source_id: agreementId,
       });
