@@ -318,6 +318,10 @@ export type Database = {
           indicators: Json
           occurred_at: string
           pinned: boolean
+          reason_category: string | null
+          reason_text: string | null
+          shared_from_id: string | null
+          source: string | null
           subject_person_id: string
           visibility_tier: string
         }
@@ -333,6 +337,10 @@ export type Database = {
           indicators?: Json
           occurred_at?: string
           pinned?: boolean
+          reason_category?: string | null
+          reason_text?: string | null
+          shared_from_id?: string | null
+          source?: string | null
           subject_person_id: string
           visibility_tier?: string
         }
@@ -348,6 +356,10 @@ export type Database = {
           indicators?: Json
           occurred_at?: string
           pinned?: boolean
+          reason_category?: string | null
+          reason_text?: string | null
+          shared_from_id?: string | null
+          source?: string | null
           subject_person_id?: string
           visibility_tier?: string
         }
@@ -371,6 +383,13 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_notes_shared_from_id_fkey"
+            columns: ["shared_from_id"]
+            isOneToOne: false
+            referencedRelation: "contact_notes"
             referencedColumns: ["id"]
           },
           {
