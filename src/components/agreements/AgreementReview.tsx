@@ -156,7 +156,7 @@ export default function AgreementReview({ agreementId, groupId, onBack, onRenew 
         title: closureStatus === "completed" ? "Commitment completed" :
                closureStatus === "incomplete" ? "Commitment marked incomplete" :
                "Commitment marked as lapsed",
-        description: selectedOutcome === "renew" ? "Opening renewal form..." : "The agreement has been closed.",
+        description: selectedOutcome === "renew" ? "Opening renewal form..." : "The commitment has been closed.",
       });
 
       if (selectedOutcome === "renew" && latestFields) {
@@ -166,7 +166,7 @@ export default function AgreementReview({ agreementId, groupId, onBack, onRenew 
       }
     } catch (err) {
       console.error("Failed to close agreement:", err);
-      toast({ title: "Error", description: "Failed to close agreement", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to close commitment", variant: "destructive" });
     } finally {
       setClosing(false);
     }
@@ -177,7 +177,7 @@ export default function AgreementReview({ agreementId, groupId, onBack, onRenew 
   }
 
   if (!agreement || !latestFields) {
-    return <p className="text-sm text-muted-foreground">Agreement not found.</p>;
+    return <p className="text-sm text-muted-foreground">Commitment not found.</p>;
   }
 
   const daysActive = Math.floor(
@@ -239,7 +239,7 @@ export default function AgreementReview({ agreementId, groupId, onBack, onRenew 
               </div>
               <Progress value={compliancePercent} className="h-2.5 sm:h-2" />
               <p className="text-[10px] text-muted-foreground">
-                Based on notes logged during the agreement period. This is a rough estimate, not a score.
+                Based on notes logged during the commitment period. This is a rough estimate, not a score.
               </p>
             </div>
           )}
@@ -362,7 +362,7 @@ export default function AgreementReview({ agreementId, groupId, onBack, onRenew 
 
           {selectedOutcome && !reflection && selectedOutcome !== "lapsed" && (
             <p className="text-xs text-muted-foreground text-center">
-              A brief reflection helps the team learn from this agreement.
+              A brief reflection helps the team learn from this commitment.
             </p>
           )}
         </CardContent>

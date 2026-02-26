@@ -363,7 +363,7 @@ export default function AgreementDetail({
   }
 
   if (!agreement || versions.length === 0) {
-    return <p className="text-sm text-muted-foreground">Agreement not found.</p>;
+    return <p className="text-sm text-muted-foreground">Commitment not found.</p>;
   }
 
   const isTerminal = ["declined", "withdrawn", "completed", "lapsed"].includes(status);
@@ -469,7 +469,7 @@ export default function AgreementDetail({
             {fields.renewed_from && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <RefreshCw className="h-3 w-3" />
-                Renewed from a previous agreement
+                Renewed from a previous commitment
               </div>
             )}
           </div>
@@ -509,7 +509,7 @@ export default function AgreementDetail({
             )}
             {closure.renewed_as && (
               <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <RefreshCw className="h-3 w-3" /> Renewed as a new agreement
+                <RefreshCw className="h-3 w-3" /> Renewed as a new commitment
               </p>
             )}
           </CardContent>
@@ -545,7 +545,7 @@ export default function AgreementDetail({
           {isCoordinator && !isSubjectPerson && hasModifiedResponse && !isTerminal && (
             <Card>
               <CardContent className="pt-4 space-y-3">
-                <p className="text-sm text-muted-foreground">The person has proposed modifications to this agreement.</p>
+                <p className="text-sm text-muted-foreground">The person has proposed modifications to this commitment.</p>
                 <div className="flex gap-2">
                   <Button onClick={async () => {
                     setSubmitting(true);
@@ -590,7 +590,7 @@ export default function AgreementDetail({
               <CardContent className="pt-4 space-y-3">
                 <div className="flex items-center gap-2 text-amber-700">
                   <AlertTriangle className="h-4 w-4" />
-                  <span className="text-sm font-medium">This agreement is due for review.</span>
+                  <span className="text-sm font-medium">This commitment is due for review.</span>
                 </div>
                 <Button onClick={() => onStartReview(agreementId)}>
                   <ClipboardCheck className="mr-1.5 h-4 w-4" /> Start Review
@@ -603,7 +603,7 @@ export default function AgreementDetail({
           {isCoordinator && !isSubjectPerson && status === "declined" && (
             <Card>
               <CardContent className="pt-4 space-y-2">
-                <p className="text-sm text-muted-foreground">This agreement was declined. You can propose a revised version.</p>
+                <p className="text-sm text-muted-foreground">This commitment was declined. You can propose a revised version.</p>
                 <Button variant="outline" size="sm" onClick={() => startModify()}>
                   <Pencil className="mr-1.5 h-4 w-4" /> Propose Revised Version
                 </Button>
