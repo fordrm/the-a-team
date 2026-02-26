@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { PLAN_LABELS } from "@/lib/planLabels";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,9 +97,11 @@ export default function CreateAgreement({ groupId, personId, prefillFields, onBa
   const [renegotiationTrigger, setRenegotiationTrigger] = useState(prefillFields?.renegotiation_trigger || "");
   const [body, setBody] = useState(prefillFields?.body || "");
   const [supportNeeded, setSupportNeeded] = useState(prefillFields?.support_needed || "");
+  const [teamCommitment, setTeamCommitment] = useState(prefillFields?.team_commitment || "");
+  const [guardrails, setGuardrails] = useState(prefillFields?.guardrails || "");
 
   // Completeness (only shown when expanded)
-  const filledOptional = [metric, renegotiationTrigger, body, supportNeeded].filter(s => s.trim()).length;
+  const filledOptional = [metric, renegotiationTrigger, body, supportNeeded, teamCommitment, guardrails].filter(s => s.trim()).length;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,6 +128,8 @@ export default function CreateAgreement({ groupId, personId, prefillFields, onBa
         support_needed: supportNeeded || undefined,
         renegotiation_trigger: renegotiationTrigger || undefined,
         renewed_from: prefillFields?.renewed_from || undefined,
+        team_commitment: teamCommitment || undefined,
+        guardrails: guardrails || undefined,
       };
 
       const { data, error } = await supabase.rpc("create_agreement_with_version", {
@@ -145,7 +150,7 @@ export default function CreateAgreement({ groupId, personId, prefillFields, onBa
           .eq("id", prefillFields.renewed_from);
       }
 
-      toast({ title: "Agreement created" });
+      toast({ title: "Commitment created" });
       onCreated(newId);
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -160,14 +165,14 @@ export default function CreateAgreement({ groupId, personId, prefillFields, onBa
         <Button variant="ghost" size="sm" className="w-fit" onClick={onBack}>
           <ArrowLeft className="mr-1 h-4 w-4" /> Back
         </Button>
-        <CardTitle className="text-lg">{prefillFields?.renewed_from ? "Renew Agreement" : "New Agreement"}</CardTitle>
+        <CardTitle className="text-lg">{prefillFields?.renewed_from ? "Renew Commitment" : PLAN_LABELS.createTitle}</CardTitle>
       </CardHeader>
 
       <CardContent>
         {prefillFields?.renewed_from && (
           <div className="flex items-center gap-2 rounded-md bg-muted/50 border px-3 py-2 mb-4 text-sm text-muted-foreground">
             <RefreshCw className="h-4 w-4 shrink-0" />
-            Renewing a previous agreement. Adjust any fields as needed.
+            Renewing a previous commitment. Adjust any fields as needed.
           </div>
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -175,7 +180,7 @@ export default function CreateAgreement({ groupId, personId, prefillFields, onBa
           {/* === COMPACT SECTION: Always visible === */}
 
           <div className="space-y-1.5">
-            <Label htmlFor="title" className="text-xs">Agreement name</Label>
+            <Label htmlFor="title" className="text-xs">Commitment name</Label>
             <Input
               id="title"
               required
@@ -308,7 +313,7 @@ export default function CreateAgreement({ groupId, personId, prefillFields, onBa
 
           {/* === CREATE BUTTON === */}
           <Button type="submit" className="w-full" disabled={saving || !title.trim() || !iWill.trim()}>
-            {saving ? "Creating…" : "Create Agreement"}
+            {saving ? "Creating…" : "Create Commitment"}
           </Button>
 
           {/* === EXPANDED SECTION: More options === */}
@@ -323,6 +328,32 @@ export default function CreateAgreement({ groupId, personId, prefillFields, onBa
             </CollapsibleTrigger>
 
             <CollapsibleContent className="space-y-4 pt-3">
+
+              {/* What the team will do */}
+              <div className="space-y-1.5">
+                <Label htmlFor="team_commitment" className="text-xs">{PLAN_LABELS.teamSection}</Label>
+                <Textarea
+                  id="team_commitment"
+                  value={teamCommitment}
+                  onChange={e => setTeamCommitment(e.target.value)}
+                  placeholder="How will the team support this?"
+                  rows={2}
+                  className="text-base sm:text-sm"
+                />
+              </div>
+
+              {/* Guardrails */}
+              <div className="space-y-1.5">
+                <Label htmlFor="guardrails" className="text-xs">{PLAN_LABELS.guardrailsSection}</Label>
+                <Textarea
+                  id="guardrails"
+                  value={guardrails}
+                  onChange={e => setGuardrails(e.target.value)}
+                  placeholder="What early warning signs should we watch for?"
+                  rows={2}
+                  className="text-base sm:text-sm"
+                />
+              </div>
 
               {/* Check-in method */}
               <div className="space-y-1.5">

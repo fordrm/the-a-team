@@ -37,6 +37,7 @@ import {
   PERSON_ASSESSMENT_OPTIONS,
 } from "@/types/agreements";
 import { checkPermission } from "@/lib/checkPermission";
+import { PLAN_LABELS } from "@/lib/planLabels";
 
 // ─── Props ───────────────────────────────────────────────
 interface Props {
@@ -198,7 +199,7 @@ export default function AgreementDetail({
       });
       if (error) throw error;
 
-      toast({ title: "Agreement accepted" });
+      toast({ title: "Commitment accepted" });
       fetchAll();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -229,7 +230,7 @@ export default function AgreementDetail({
         source_id: agreementId,
       });
 
-      toast({ title: "Agreement declined" });
+      toast({ title: "Commitment declined" });
       fetchAll();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -257,7 +258,7 @@ export default function AgreementDetail({
         source_id: agreementId,
       });
 
-      toast({ title: "Agreement withdrawn" });
+      toast({ title: "Commitment withdrawn" });
       fetchAll();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -385,7 +386,7 @@ export default function AgreementDetail({
         <CardContent className="pt-4 space-y-4">
           {/* Title */}
           <div>
-            <h2 className="text-lg font-semibold">{fields.title || "Untitled Agreement"}</h2>
+            <h2 className="text-lg font-semibold">{fields.title || "Untitled Commitment"}</h2>
             {versions.length > 1 && (
               <p className="text-xs text-muted-foreground mt-0.5">
                 Version {latestVersion.version_num} · Last updated by {memberName(latestVersion.proposed_by_user_id)}
@@ -397,8 +398,22 @@ export default function AgreementDetail({
           <div className="space-y-3">
             {fields.i_will_statement && (
               <div>
-                <span className="text-xs text-muted-foreground block">Commitment</span>
+                <span className="text-xs text-muted-foreground block">{PLAN_LABELS.personSection}</span>
                 <span className="text-sm italic">"{fields.i_will_statement}"</span>
+              </div>
+            )}
+
+            {fields.team_commitment && (
+              <div>
+                <span className="text-xs text-muted-foreground block">{PLAN_LABELS.teamSection}</span>
+                <span className="text-sm">{fields.team_commitment}</span>
+              </div>
+            )}
+
+            {fields.guardrails && (
+              <div>
+                <span className="text-xs text-muted-foreground block">{PLAN_LABELS.guardrailsSection}</span>
+                <span className="text-sm">{fields.guardrails}</span>
               </div>
             )}
 
@@ -468,9 +483,9 @@ export default function AgreementDetail({
             <div className="flex items-center gap-2">
               {statusConfig.icon}
               <span className="text-sm font-medium">
-                {status === "completed" ? "Agreement completed" :
-                 status === "incomplete" ? "Agreement incomplete" :
-                 "Agreement lapsed"}
+                 {status === "completed" ? "Commitment completed" :
+                  status === "incomplete" ? "Commitment incomplete" :
+                  "Commitment lapsed"}
               </span>
               {closure.early_close && (
                 <Badge variant="outline" className="text-xs">
@@ -508,17 +523,17 @@ export default function AgreementDetail({
           {isSubjectPerson && status === "proposed" && !hasResponded && (
             <Card>
               <CardContent className="pt-4 space-y-3">
-                <p className="text-sm">This agreement is waiting for your response.</p>
+                <p className="text-sm">This commitment is waiting for your response.</p>
                 <div className="grid grid-cols-1 gap-2">
-                  <Button className="h-12 text-base" onClick={handleAccept} disabled={submitting}>
-                    <CheckCircle className="mr-2 h-5 w-5" /> Accept Agreement
+                   <Button className="h-12 text-base" onClick={handleAccept} disabled={submitting}>
+                     <CheckCircle className="mr-2 h-5 w-5" /> {PLAN_LABELS.accept}
                   </Button>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" className="h-11" onClick={() => startModify()} disabled={submitting}>
-                      <Pencil className="mr-2 h-4 w-4" /> Modify
-                    </Button>
-                    <Button variant="outline" className="h-11 text-destructive hover:text-destructive" onClick={handleDecline} disabled={submitting}>
-                      <XCircle className="mr-2 h-4 w-4" /> Decline
+                     <Button variant="outline" className="h-11" onClick={() => startModify()} disabled={submitting}>
+                       <Pencil className="mr-2 h-4 w-4" /> {PLAN_LABELS.modify}
+                     </Button>
+                     <Button variant="outline" className="h-11 text-destructive hover:text-destructive" onClick={handleDecline} disabled={submitting}>
+                       <XCircle className="mr-2 h-4 w-4" /> {PLAN_LABELS.decline}
                     </Button>
                   </div>
                 </div>
@@ -613,7 +628,7 @@ export default function AgreementDetail({
                 onClick={handleWithdraw}
                 disabled={submitting}
               >
-                <X className="mr-1 h-4 w-4" /> Withdraw Agreement
+                <X className="mr-1 h-4 w-4" /> Withdraw Commitment
               </Button>
             </div>
           )}
@@ -635,7 +650,7 @@ export default function AgreementDetail({
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs">Agreement name</Label>
+                <Label className="text-xs">Commitment name</Label>
                 <Input
                   value={modFields.title || ""}
                   onChange={(e) => setModFields((f) => ({ ...f, title: e.target.value }))}

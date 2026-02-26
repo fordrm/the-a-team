@@ -24,6 +24,8 @@ export interface VersionFields {
   renegotiation_trigger?: string;
   linked_indicators?: string[];
   renewed_from?: string;
+  team_commitment?: string;
+  guardrails?: string;
 }
 
 export function formatCadenceDisplay(fields: VersionFields): string {

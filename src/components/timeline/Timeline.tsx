@@ -122,14 +122,14 @@ function sortItems(items: TimelineItem[]): TimelineItem[] {
 }
 
 const AGREEMENT_STATUS_CONFIG: Record<string, { icon: React.ReactNode; label: string }> = {
-  created: { icon: <FileText className="h-3 w-3 text-blue-500" />, label: "Agreement created" },
-  accepted: { icon: <Check className="h-3 w-3 text-green-500" />, label: "Agreement accepted" },
-  modified: { icon: <Pencil className="h-3 w-3 text-amber-500" />, label: "Modification proposed" },
-  declined: { icon: <X className="h-3 w-3 text-red-500" />, label: "Agreement declined" },
-  withdrawn: { icon: <XCircle className="h-3 w-3 text-gray-500" />, label: "Agreement withdrawn" },
-  completed: { icon: <Check className="h-3 w-3 text-green-600" />, label: "Agreement completed" },
-  incomplete: { icon: <AlertTriangle className="h-3 w-3 text-amber-500" />, label: "Agreement incomplete" },
-  lapsed: { icon: <Clock className="h-3 w-3 text-gray-400" />, label: "Agreement lapsed" },
+  created: { icon: <FileText className="h-3 w-3 text-blue-500" />, label: "Commitment created" },
+  accepted: { icon: <Check className="h-3 w-3 text-green-500" />, label: "Commitment accepted" },
+  modified: { icon: <Pencil className="h-3 w-3 text-amber-500" />, label: "Changes suggested" },
+  declined: { icon: <X className="h-3 w-3 text-red-500" />, label: "Commitment declined" },
+  withdrawn: { icon: <XCircle className="h-3 w-3 text-gray-500" />, label: "Commitment withdrawn" },
+  completed: { icon: <Check className="h-3 w-3 text-green-600" />, label: "Commitment completed" },
+  incomplete: { icon: <AlertTriangle className="h-3 w-3 text-amber-500" />, label: "Commitment incomplete" },
+  lapsed: { icon: <Clock className="h-3 w-3 text-gray-400" />, label: "Commitment lapsed" },
   review_needed: { icon: <Clock className="h-3 w-3 text-amber-500" />, label: "Review due" },
   self_assessed: { icon: <User className="h-3 w-3 text-blue-500" />, label: "Self-assessment" },
 };
@@ -205,7 +205,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
           if (!versionsMap[v.agreement_id]) versionsMap[v.agreement_id] = [];
           versionsMap[v.agreement_id].push(v.fields as VersionFields);
           // titleMap uses latest version title
-          titleMap[v.agreement_id] = v.fields?.title || titleMap[v.agreement_id] || "Untitled Agreement";
+          titleMap[v.agreement_id] = v.fields?.title || titleMap[v.agreement_id] || "Untitled Commitment";
         });
       }
 
@@ -223,7 +223,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
           message: null,
           person_user_id: a.created_by_user_id,
           created_at: a.created_at,
-          agreement_title: titleMap[a.id] || "Agreement",
+          agreement_title: titleMap[a.id] || "Commitment",
         };
         if (!agreementEventsMap[a.id]) agreementEventsMap[a.id] = [];
         agreementEventsMap[a.id].push(event);
@@ -237,7 +237,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
           message: a.message,
           person_user_id: a.person_user_id,
           created_at: a.created_at,
-          agreement_title: titleMap[a.agreement_id] || "Agreement",
+          agreement_title: titleMap[a.agreement_id] || "Commitment",
         };
         if (!agreementEventsMap[a.agreement_id]) agreementEventsMap[a.agreement_id] = [];
         agreementEventsMap[a.agreement_id].push(event);
@@ -399,7 +399,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
               <SelectItem value="all">All types</SelectItem>
               <SelectItem value="notes">Notes only</SelectItem>
               <SelectItem value="interventions">Interventions</SelectItem>
-              <SelectItem value="agreements">Agreements</SelectItem>
+              <SelectItem value="agreements">Commitments</SelectItem>
             </SelectContent>
           </Select>
 
