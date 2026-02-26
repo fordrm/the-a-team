@@ -552,6 +552,53 @@ export type Database = {
           },
         ]
       }
+      group_settings: {
+        Row: {
+          default_note_visibility: string
+          focused_period_ack: string
+          group_id: string
+          id: string
+          indicator_input_mode: string
+          operating_mode: string
+          plan_authorship: string
+          sharing_model: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          default_note_visibility?: string
+          focused_period_ack?: string
+          group_id: string
+          id?: string
+          indicator_input_mode?: string
+          operating_mode?: string
+          plan_authorship?: string
+          sharing_model?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          default_note_visibility?: string
+          focused_period_ack?: string
+          group_id?: string
+          id?: string
+          indicator_input_mode?: string
+          operating_mode?: string
+          plan_authorship?: string
+          sharing_model?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_settings_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: true
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       groups: {
         Row: {
           created_at: string
@@ -946,6 +993,10 @@ export type Database = {
       delete_supported_person: {
         Args: { p_group_id: string; p_person_id: string }
         Returns: undefined
+      }
+      get_group_operating_mode: {
+        Args: { p_group_id: string }
+        Returns: string
       }
       invite_member_by_email: {
         Args: {
