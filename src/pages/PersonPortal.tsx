@@ -21,6 +21,7 @@ import MyCheckIns from "@/components/person-portal/MyCheckIns";
 import MyTrends from "@/components/person-portal/MyTrends";
 import FocusedPeriodBanner from "@/components/focused-periods/FocusedPeriodBanner";
 import InitiateFocusedPeriod from "@/components/focused-periods/InitiateFocusedPeriod";
+import TransparencyPanel from "@/components/person-portal/TransparencyPanel";
 
 interface PersonInfo {
   id: string;
@@ -400,6 +401,9 @@ export default function PersonPortal() {
           groupId={personInfo.group_id}
           refreshKey={selfReportRefreshKey}
         />
+
+        {/* Transparency Panel */}
+        <TransparencyPanel personId={personInfo.id} groupId={personInfo.group_id} />
 
         {/* Section 1: Shared Notes */}
         <Card>

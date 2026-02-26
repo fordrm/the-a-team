@@ -1063,6 +1063,10 @@ export type Database = {
         Args: { p_group_id: string }
         Returns: string
       }
+      get_team_note_count: {
+        Args: { p_days?: number; p_group_id: string }
+        Returns: number
+      }
       invite_member_by_email: {
         Args: {
           p_display_name?: string
