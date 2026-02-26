@@ -153,9 +153,9 @@ export default function AgreementReview({ agreementId, groupId, onBack, onRenew 
       if (error) throw error;
 
       toast({
-        title: closureStatus === "completed" ? "Agreement completed" :
-               closureStatus === "incomplete" ? "Agreement marked incomplete" :
-               "Agreement marked as lapsed",
+        title: closureStatus === "completed" ? "Commitment completed" :
+               closureStatus === "incomplete" ? "Commitment marked incomplete" :
+               "Commitment marked as lapsed",
         description: selectedOutcome === "renew" ? "Opening renewal form..." : "The agreement has been closed.",
       });
 
@@ -196,7 +196,7 @@ export default function AgreementReview({ agreementId, groupId, onBack, onRenew 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-lg">
-            Review: {latestFields.title || "Agreement"}
+            Review: {latestFields.title || "Commitment"}
           </CardTitle>
           {agreement.status === "review_needed" && (
             <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">

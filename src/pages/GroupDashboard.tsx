@@ -379,7 +379,7 @@ export default function GroupDashboard() {
               <SelectContent className="bg-background z-50">
                 {!isSubjectPerson && <SelectItem value="members"><span className="flex items-center gap-2"><Users className="h-4 w-4" /> Members</span></SelectItem>}
                 {!isSubjectPerson && <SelectItem value="persons"><span className="flex items-center gap-2"><Heart className="h-4 w-4" /> Persons</span></SelectItem>}
-                <SelectItem value="agreements"><span className="flex items-center gap-2"><Clock className="h-4 w-4" /> Agreements</span></SelectItem>
+                <SelectItem value="agreements"><span className="flex items-center gap-2"><Clock className="h-4 w-4" /> Our Plan</span></SelectItem>
                 <SelectItem value="timeline"><span className="flex items-center gap-2"><Clock className="h-4 w-4" /> {isSubjectPerson ? "Shared Notes" : "Timeline"}{timelineUnread > 0 && <Badge variant="destructive" className="ml-1 h-4 min-w-4 px-1 text-[10px]">{timelineUnread > 99 ? "99+" : timelineUnread}</Badge>}</span></SelectItem>
                 {!isSubjectPerson && <SelectItem value="contradictions"><span className="flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Conflicts</span></SelectItem>}
                 {!isSubjectPerson && <SelectItem value="interventions"><span className="flex items-center gap-2"><Activity className="h-4 w-4" /> Interventions</span></SelectItem>}
@@ -392,7 +392,7 @@ export default function GroupDashboard() {
           <TabsList className="hidden sm:flex w-full">
             {!isSubjectPerson && <TabsTrigger value="members" className="flex-1">Members</TabsTrigger>}
             {!isSubjectPerson && <TabsTrigger value="persons" className="flex-1">Persons</TabsTrigger>}
-            <TabsTrigger value="agreements" className="flex-1">Agreements</TabsTrigger>
+            <TabsTrigger value="agreements" className="flex-1">Our Plan</TabsTrigger>
             <TabsTrigger value="timeline" className="flex-1"><span className="flex items-center gap-1">{isSubjectPerson ? "Shared Notes" : "Timeline"}{timelineUnread > 0 && <Badge variant="destructive" className="ml-1 h-4 min-w-4 px-1 text-[10px]">{timelineUnread > 99 ? "99+" : timelineUnread}</Badge>}</span></TabsTrigger>
             {!isSubjectPerson && <TabsTrigger value="contradictions" className="flex-1">Conflicts</TabsTrigger>}
             {!isSubjectPerson && <TabsTrigger value="interventions" className="flex-1">Interventions</TabsTrigger>}

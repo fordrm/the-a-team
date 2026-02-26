@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Info, LogOut, Pencil, HelpCircle, CheckCircle2, Clock, Bell } from "lucide-react";
+import { PLAN_LABELS } from "@/lib/planLabels";
 import { PERSON_ASSESSMENT_OPTIONS, type PersonAssessment } from "@/types/agreements";
 import { useToast } from "@/hooks/use-toast";
 import AgreementDetail from "@/components/agreements/AgreementDetail";
@@ -423,19 +424,19 @@ export default function PersonPortal() {
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">My Agreements</CardTitle>
+              <CardTitle className="text-lg">{PLAN_LABELS.sectionTitle}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {agreements.filter(a => a.status === "proposed").length > 0 && (
                 <div className="rounded-md bg-primary/10 border border-primary/20 px-3 py-2 text-sm text-primary flex items-center gap-2">
                   <Bell className="h-4 w-4" />
-                  {agreements.filter(a => a.status === "proposed").length} agreement{agreements.filter(a => a.status === "proposed").length !== 1 ? "s" : ""} waiting for your response
+                  {agreements.filter(a => a.status === "proposed").length} {agreements.filter(a => a.status === "proposed").length !== 1 ? PLAN_LABELS.plural : PLAN_LABELS.singular} waiting for your response
                 </div>
               )}
               {agreements.length === 0 ? (
                 <div className="py-4 text-center">
-                  <p className="text-sm font-medium">No agreements yet</p>
-                  <p className="text-sm text-muted-foreground mt-1">Agreements shared with you will appear here for review and acceptance.</p>
+                  <p className="text-sm font-medium">No {PLAN_LABELS.plural} yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">{PLAN_LABELS.emptyActive}</p>
                 </div>
               ) : (
                 <ul className="space-y-3">
@@ -455,7 +456,7 @@ export default function PersonPortal() {
                       >
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium">
-                            {fields?.title || fields?.summary || "Agreement"}
+                            {fields?.title || fields?.summary || "Commitment"}
                           </p>
                           <div className="flex items-center gap-2">
                             {needsResponse && (
@@ -480,7 +481,7 @@ export default function PersonPortal() {
                             onClick={(e) => { e.stopPropagation(); requestRevisit(a.id); }}
                             className="text-xs text-muted-foreground hover:text-foreground underline mt-1"
                           >
-                            I'd like to revisit this
+                            {PLAN_LABELS.revisit}
                           </button>
                         )}
                         {/* Self-assessment for review_needed */}

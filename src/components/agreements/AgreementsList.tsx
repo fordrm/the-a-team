@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { FileText, Plus, ChevronDown } from "lucide-react";
 import type { VersionFields } from "@/types/agreements";
 import { formatCadenceDisplay, formatDurationDisplay, ACTIVE_STATUSES, PENDING_STATUSES, TERMINAL_STATUSES, type AgreementStatus } from "@/types/agreements";
+import { PLAN_LABELS } from "@/lib/planLabels";
 
 interface AgreementRow {
   id: string;
@@ -136,24 +137,24 @@ export default function AgreementsList({ groupId, personId, onCreateNew, onViewA
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <FileText className="h-5 w-5 text-primary" /> Agreements
+          <FileText className="h-5 w-5 text-primary" /> {PLAN_LABELS.sectionTitle}
         </CardTitle>
         {isGroupMember && (
           <Button size="sm" variant="outline" onClick={onCreateNew} disabled={!personId}>
-            <Plus className="mr-1 h-4 w-4" /> New Agreement
+            <Plus className="mr-1 h-4 w-4" /> {PLAN_LABELS.createButton}
           </Button>
         )}
       </CardHeader>
       <CardContent className="space-y-4">
         {agreements.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No agreements yet.</p>
+          <p className="text-sm text-muted-foreground">{PLAN_LABELS.emptyActive}</p>
         ) : (
           <>
             {/* Active */}
             {activeAgreements.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Active</span>
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{PLAN_LABELS.active}</span>
                   <Badge variant="secondary" className="text-xs h-5 px-1.5">{activeAgreements.length}</Badge>
                 </div>
                 <ul className="space-y-2">{activeAgreements.map(renderItem)}</ul>
@@ -164,7 +165,7 @@ export default function AgreementsList({ groupId, personId, onCreateNew, onViewA
             {pendingAgreements.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pending</span>
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{PLAN_LABELS.pending}</span>
                   <Badge variant="secondary" className="text-xs h-5 px-1.5">{pendingAgreements.length}</Badge>
                 </div>
                 <ul className="space-y-2">{pendingAgreements.map(renderItem)}</ul>
@@ -176,7 +177,7 @@ export default function AgreementsList({ groupId, personId, onCreateNew, onViewA
               <Collapsible>
                 <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground">
                   <ChevronDown className="h-3 w-3" />
-                  Closed
+                  {PLAN_LABELS.closed}
                   <Badge variant="secondary" className="text-xs h-5 px-1.5">{closedAgreements.length}</Badge>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-2">
