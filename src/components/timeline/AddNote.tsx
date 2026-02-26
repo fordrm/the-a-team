@@ -12,13 +12,24 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, ChevronRight, ChevronDown, Search, HelpCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { INDICATOR_CATEGORIES } from "@/lib/indicators";
+import { useGroupSettings } from "@/hooks/useGroupSettings";
 
 const CHANNELS = ["call", "text", "in-person", "video", "other"] as const;
 const VISIBILITY_TIERS = [
   { value: "shared_with_person", label: "Shared with person" },
   { value: "supporters_only", label: "Supporters only" },
   { value: "restricted", label: "Restricted (coordinators)" },
+] as const;
+
+const REASON_CATEGORIES = [
+  { value: "mood_shift", label: "Mood shift" },
+  { value: "sleep_disruption", label: "Sleep disruption" },
+  { value: "communication_change", label: "Communication change" },
+  { value: "safety_concern", label: "Safety concern" },
+  { value: "logistics", label: "Logistics" },
+  { value: "other", label: "Other" },
 ] as const;
 
 interface Props {
@@ -32,6 +43,9 @@ export default function AddNote({ groupId, personId, onBack, onCreated }: Props)
   const { user } = useAuth();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const { data: groupSettings } = useGroupSettings(groupId);
+
+  const isCollaborative = !groupSettings || groupSettings.operating_mode === "collaborative";
 
   const [occurredAt, setOccurredAt] = useState(() => {
     const now = new Date();
@@ -41,6 +55,8 @@ export default function AddNote({ groupId, personId, onBack, onCreated }: Props)
   const [channel, setChannel] = useState<string>("");
   const [visibility, setVisibility] = useState("supporters_only");
   const [body, setBody] = useState("");
+  const [reasonCategory, setReasonCategory] = useState("");
+  const [reasonText, setReasonText] = useState("");
   const [indicators, setIndicators] = useState<Record<string, boolean>>({});
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [indicatorFilter, setIndicatorFilter] = useState("");
@@ -68,6 +84,14 @@ export default function AddNote({ groupId, personId, onBack, onCreated }: Props)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    if (isCollaborative && !reasonCategory) {
+      toast({ title: "Required", description: "Please select a reason category.", variant: "destructive" });
+      return;
+    }
+    if (isCollaborative && reasonText.trim().length < 10) {
+      toast({ title: "Required", description: "Brief explanation must be at least 10 characters.", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
       const { error } = await supabase.from("contact_notes").insert({
@@ -80,6 +104,8 @@ export default function AddNote({ groupId, personId, onBack, onCreated }: Props)
         occurred_at: new Date(occurredAt).toISOString(),
         indicators,
         body,
+        reason_category: isCollaborative ? reasonCategory : null,
+        reason_text: isCollaborative && reasonText.trim() ? reasonText.trim() : null,
       });
       if (error) throw error;
       toast({ title: "Note added" });
@@ -97,10 +123,39 @@ export default function AddNote({ groupId, personId, onBack, onCreated }: Props)
         <Button variant="ghost" size="sm" className="w-fit" onClick={onBack}>
           <ArrowLeft className="mr-1 h-4 w-4" /> Back
         </Button>
-        <CardTitle className="text-lg">Add Contact Note</CardTitle>
+        <CardTitle className="text-lg">{isCollaborative ? "Log a concern" : "Add Contact Note"}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Reason fields — collaborative mode only */}
+          {isCollaborative && (
+            <>
+              <div className="space-y-2">
+                <Label>What's this about? <span className="text-destructive">*</span></Label>
+                <RadioGroup value={reasonCategory} onValueChange={setReasonCategory}>
+                  {REASON_CATEGORIES.map(rc => (
+                    <div key={rc.value} className="flex items-center space-x-2">
+                      <RadioGroupItem value={rc.value} id={`reason-${rc.value}`} />
+                      <Label htmlFor={`reason-${rc.value}`} className="font-normal cursor-pointer">{rc.label}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+              <div className="space-y-2">
+                <Label>Brief explanation <span className="text-destructive">*</span></Label>
+                <Textarea
+                  value={reasonText}
+                  onChange={e => setReasonText(e.target.value)}
+                  placeholder="1-2 sentences about why you're noting this"
+                  rows={2}
+                  required
+                  minLength={10}
+                />
+                <p className="text-xs text-muted-foreground">Minimum 10 characters</p>
+              </div>
+            </>
+          )}
+
           <div className="space-y-2">
             <Label>When did this occur?</Label>
             <Input

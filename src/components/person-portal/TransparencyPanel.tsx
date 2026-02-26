@@ -24,6 +24,10 @@ const REASON_LABELS: Record<string, string> = {
   medication_concern: "Medication concern",
   team_observation: "Team observation",
   routine_disruption: "Routine disruption",
+  sleep_disruption: "Sleep disruption",
+  communication_change: "Communication change",
+  safety_concern: "Safety concern",
+  logistics: "Logistics",
   other: "Other",
 };
 
@@ -31,7 +35,8 @@ export default function TransparencyPanel({ personId, groupId }: Props) {
   const { user } = useAuth();
   const [checkInCount, setCheckInCount] = useState(0);
   const [sharedCount, setSharedCount] = useState(0);
-  const [teamNoteCount, setTeamNoteCount] = useState(0);
+  const [teamNoteTotal, setTeamNoteTotal] = useState(0);
+  const [teamNoteCategories, setTeamNoteCategories] = useState<Record<string, number>>({});
   const [activePeriods, setActivePeriods] = useState<FocusedPeriod[]>([]);
   const [totalPeriods, setTotalPeriods] = useState(0);
   const [loaded, setLoaded] = useState(false);
@@ -44,7 +49,7 @@ export default function TransparencyPanel({ personId, groupId }: Props) {
     const since = thirtyDaysAgo.toISOString();
 
     const fetchCounts = async () => {
-      const [checkIns, shared, teamCount, activeP, totalP] = await Promise.all([
+      const [checkIns, shared, teamSummary, activeP, totalP] = await Promise.all([
         // Self-report check-ins
         (supabase as any)
           .from("contact_notes")
@@ -61,8 +66,8 @@ export default function TransparencyPanel({ personId, groupId }: Props) {
           .eq("subject_person_id", personId)
           .eq("source", "shared_snapshot")
           .gte("created_at", since),
-        // Team note count via RPC
-        supabase.rpc("get_team_note_count", { p_group_id: groupId, p_days: 30 }),
+        // Team note summary via RPC
+        supabase.rpc("get_team_note_summary", { p_group_id: groupId, p_days: 30 }),
         // Active focused periods
         (supabase as any)
           .from("focused_periods")
@@ -78,7 +83,9 @@ export default function TransparencyPanel({ personId, groupId }: Props) {
 
       setCheckInCount(checkIns.count ?? 0);
       setSharedCount(shared.count ?? 0);
-      setTeamNoteCount(teamCount.data ?? 0);
+      const summary = teamSummary.data as { total: number; by_category: Record<string, number> } | null;
+      setTeamNoteTotal(summary?.total ?? 0);
+      setTeamNoteCategories(summary?.by_category ?? {});
       setActivePeriods(activeP.data ?? []);
       setTotalPeriods(totalP.count ?? 0);
       setLoaded(true);
@@ -124,9 +131,17 @@ export default function TransparencyPanel({ personId, groupId }: Props) {
           <p className="text-xs font-medium text-muted-foreground">This month:</p>
           <ul className="text-sm space-y-0.5">
             <li>• Your check-ins: {checkInCount} (shared: {sharedCount})</li>
-            <li>• Team coordination notes: {teamNoteCount}</li>
+            <li>• Team coordination notes: {teamNoteTotal}</li>
             <li>• Focused support periods: {activePeriods.length} active / {totalPeriods} total</li>
           </ul>
+          {Object.keys(teamNoteCategories).length > 0 && (
+            <p className="text-xs text-muted-foreground pt-1">
+              {Object.entries(teamNoteCategories)
+                .filter(([cat]) => cat !== "uncategorized")
+                .map(([cat, count]) => `${REASON_LABELS[cat] ?? cat}: ${count}`)
+                .join(" · ")}
+            </p>
+          )}
         </div>
 
         {/* Active focused period detail */}
