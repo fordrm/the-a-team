@@ -33,6 +33,8 @@ import IndicatorTrend from "@/components/dashboard/IndicatorTrend";
 import TrackingCyclesList from "@/components/cycles/TrackingCyclesList";
 import CycleBanner from "@/components/cycles/CycleBanner";
 import { CalendarRange } from "lucide-react";
+import FocusedPeriodBanner from "@/components/focused-periods/FocusedPeriodBanner";
+import ProposeFocusedPeriod from "@/components/focused-periods/ProposeFocusedPeriod";
 
 interface GroupRow { id: string; name: string; }
 interface MemberRow { id: string; user_id: string; role: string; display_name: string | null; is_active: boolean; }
@@ -68,6 +70,7 @@ export default function GroupDashboard() {
   const [interventionKey, setInterventionKey] = useState(0);
   const [alertView, setAlertView] = useState<AlertView>({ type: "list" });
   const [alertKey, setAlertKey] = useState(0);
+  const [focusedPeriodKey, setFocusedPeriodKey] = useState(0);
   const [timelineUnread, setTimelineUnread] = useState(0);
 
   // invite form
@@ -324,9 +327,14 @@ export default function GroupDashboard() {
             <h1 className="text-2xl font-bold">{group?.name}</h1>
             <p className="text-sm text-muted-foreground">Group Dashboard</p>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut}>
-            <LogOut className="mr-1 h-4 w-4" /> Sign Out
-          </Button>
+          <div className="flex items-center gap-2">
+            {isCoordinator && groupId && (
+              <ProposeFocusedPeriod groupId={groupId} onCreated={() => setFocusedPeriodKey(k => k + 1)} />
+            )}
+            <Button variant="ghost" size="sm" onClick={signOut}>
+              <LogOut className="mr-1 h-4 w-4" /> Sign Out
+            </Button>
+          </div>
         </div>
 
         {/* Active Person Selector — shown above tabs when relevant */}
@@ -367,6 +375,11 @@ export default function GroupDashboard() {
         {/* Active Cycle Banner */}
         {activePersonId && !isSubjectPerson && (
           <CycleBanner groupId={groupId!} personId={activePersonId} />
+        )}
+
+        {/* Focused Period Banner */}
+        {groupId && (
+          <FocusedPeriodBanner key={focusedPeriodKey} groupId={groupId} variant="coordinator" />
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>

@@ -470,6 +470,71 @@ export type Database = {
           },
         ]
       }
+      focused_periods: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          created_at: string
+          declined: boolean
+          ended_early_at: string | null
+          ended_early_by: string | null
+          ends_at: string
+          group_id: string
+          id: string
+          initiated_by: string
+          reason_category: string
+          reason_text: string | null
+          review_notes: string | null
+          starts_at: string
+          status: string
+          trigger_type: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          declined?: boolean
+          ended_early_at?: string | null
+          ended_early_by?: string | null
+          ends_at: string
+          group_id: string
+          id?: string
+          initiated_by: string
+          reason_category: string
+          reason_text?: string | null
+          review_notes?: string | null
+          starts_at?: string
+          status?: string
+          trigger_type: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          declined?: boolean
+          ended_early_at?: string | null
+          ended_early_by?: string | null
+          ends_at?: string
+          group_id?: string
+          id?: string
+          initiated_by?: string
+          reason_category?: string
+          reason_text?: string | null
+          review_notes?: string | null
+          starts_at?: string
+          status?: string
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "focused_periods_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_invites: {
         Row: {
           accepted_at: string | null
