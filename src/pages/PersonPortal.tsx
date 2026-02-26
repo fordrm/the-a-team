@@ -19,6 +19,8 @@ import AgreementDetail from "@/components/agreements/AgreementDetail";
 import SelfReportCheckIn from "@/components/person-portal/SelfReportCheckIn";
 import MyCheckIns from "@/components/person-portal/MyCheckIns";
 import MyTrends from "@/components/person-portal/MyTrends";
+import FocusedPeriodBanner from "@/components/focused-periods/FocusedPeriodBanner";
+import InitiateFocusedPeriod from "@/components/focused-periods/InitiateFocusedPeriod";
 
 interface PersonInfo {
   id: string;
@@ -66,6 +68,7 @@ export default function PersonPortal() {
 
   // Explainer modal
   const [explainerOpen, setExplainerOpen] = useState(false);
+  const [focusedPeriodKey, setFocusedPeriodKey] = useState(0);
 
   useEffect(() => {
     if (loading) return;
@@ -356,6 +359,14 @@ export default function PersonPortal() {
           <span className="text-muted-foreground">Status: <span className="text-foreground font-medium">Connected to your support team</span></span>
         </div>
 
+        {/* Focused Period Banner & Acknowledgment */}
+        <FocusedPeriodBanner
+          key={focusedPeriodKey}
+          groupId={personInfo.group_id}
+          variant="person"
+          onAcknowledge={() => setFocusedPeriodKey(k => k + 1)}
+        />
+
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
@@ -368,6 +379,12 @@ export default function PersonPortal() {
           personId={personInfo.id}
           groupId={personInfo.group_id}
           onSaved={() => setSelfReportRefreshKey(k => k + 1)}
+        />
+
+        {/* Initiate Focused Period */}
+        <InitiateFocusedPeriod
+          groupId={personInfo.group_id}
+          onCreated={() => setFocusedPeriodKey(k => k + 1)}
         />
 
         {/* My Check-Ins */}
