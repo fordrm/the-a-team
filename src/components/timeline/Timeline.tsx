@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Clock, Plus, ChevronDown, ChevronRight, Eye, EyeOff, Shield, Activity, Pin, FileText, Check, Pencil, X, XCircle, Paperclip, AlertTriangle, User, CalendarRange } from "lucide-react";
+import { Clock, Plus, ChevronDown, ChevronRight, Eye, EyeOff, Shield, Activity, Pin, FileText, Check, Pencil, X, XCircle, Paperclip, AlertTriangle, User, CalendarRange, Tag } from "lucide-react";
 import { INDICATOR_LABEL_MAP, ALL_INDICATORS, getIndicatorBadgeColor } from "@/lib/indicators";
 import { formatCadenceDisplay, formatDurationDisplay, computeFieldDiffs } from "@/types/agreements";
 import type { VersionFields, FieldDiff } from "@/types/agreements";
@@ -23,6 +23,8 @@ interface NoteRow {
   created_at: string;
   pinned: boolean;
   cycle_id: string | null;
+  reason_category: string | null;
+  reason_text: string | null;
 }
 
 interface InterventionRow {
@@ -158,7 +160,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
       const [notesRes, intRes, accRes, agreeRes] = await Promise.all([
         supabase
           .from("contact_notes")
-          .select("id, author_user_id, visibility_tier, channel, occurred_at, indicators, body, created_at, pinned, cycle_id")
+          .select("id, author_user_id, visibility_tier, channel, occurred_at, indicators, body, created_at, pinned, cycle_id, reason_category, reason_text")
           .eq("group_id", groupId)
           .eq("subject_person_id", personId)
           .order("occurred_at", { ascending: false }),
@@ -526,6 +528,14 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                           </div>
                         </div>
                       </div>
+                      {/* Reason badge */}
+                      {n.reason_category && (
+                        <div className="pl-11 flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Tag className="h-3 w-3" />
+                          <span className="font-medium">{n.reason_category.replace(/_/g, " ")}</span>
+                          {n.reason_text && <span>· "{n.reason_text}"</span>}
+                        </div>
+                      )}
                       <p className="text-sm pl-11">{n.body}</p>
                       {indicatorKeys.length > 0 && (
                         <div className="pl-11">
