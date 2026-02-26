@@ -15,6 +15,9 @@ import { Info, LogOut, Pencil, HelpCircle, CheckCircle2, Clock, Bell } from "luc
 import { PERSON_ASSESSMENT_OPTIONS, type PersonAssessment } from "@/types/agreements";
 import { useToast } from "@/hooks/use-toast";
 import AgreementDetail from "@/components/agreements/AgreementDetail";
+import SelfReportCheckIn from "@/components/person-portal/SelfReportCheckIn";
+import MyCheckIns from "@/components/person-portal/MyCheckIns";
+import MyTrends from "@/components/person-portal/MyTrends";
 
 interface PersonInfo {
   id: string;
@@ -44,6 +47,7 @@ interface AgreementVersion {
 }
 
 export default function PersonPortal() {
+  const [selfReportRefreshKey, setSelfReportRefreshKey] = useState(0);
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -357,6 +361,27 @@ export default function PersonPortal() {
             This space shows only items explicitly shared with you. Some coordination notes remain internal to your support team.
           </AlertDescription>
         </Alert>
+
+        {/* Self-Report Check-In */}
+        <SelfReportCheckIn
+          personId={personInfo.id}
+          groupId={personInfo.group_id}
+          onSaved={() => setSelfReportRefreshKey(k => k + 1)}
+        />
+
+        {/* My Check-Ins */}
+        <MyCheckIns
+          personId={personInfo.id}
+          groupId={personInfo.group_id}
+          refreshKey={selfReportRefreshKey}
+        />
+
+        {/* My Trends */}
+        <MyTrends
+          personId={personInfo.id}
+          groupId={personInfo.group_id}
+          refreshKey={selfReportRefreshKey}
+        />
 
         {/* Section 1: Shared Notes */}
         <Card>
