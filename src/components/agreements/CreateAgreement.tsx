@@ -427,7 +427,7 @@ export default function CreateAgreement({ groupId, personId, prefillFields, onBa
               {/* Completeness indicator — only in expanded view */}
               <div className="rounded-md bg-muted/50 px-3 py-2 space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Agreement strength</span>
+                  <span className="text-xs text-muted-foreground">Commitment strength</span>
                   <span className={`text-xs font-medium ${
                     filledOptional === 0 ? "text-muted-foreground" :
                     filledOptional <= 1 ? "text-amber-500" :
@@ -445,7 +445,7 @@ export default function CreateAgreement({ groupId, personId, prefillFields, onBa
                   />
                 </div>
                 <p className="text-[10px] text-muted-foreground">
-                  Core fields filled. Optional details make agreements easier to track and review.
+                  Core fields filled. Optional details make commitments easier to track and review.
                 </p>
               </div>
 

@@ -54,7 +54,7 @@ export default function AgreementReview({ agreementId, groupId, onBack, onRenew 
         .eq("id", agreementId)
         .single();
 
-      if (!agData) throw new Error("Agreement not found");
+      if (!agData) throw new Error("Commitment not found");
       setAgreement(agData);
 
       const { data: versionData } = await supabase
@@ -165,7 +165,7 @@ export default function AgreementReview({ agreementId, groupId, onBack, onRenew 
         onBack();
       }
     } catch (err) {
-      console.error("Failed to close agreement:", err);
+      console.error("Failed to close commitment:", err);
       toast({ title: "Error", description: "Failed to close commitment", variant: "destructive" });
     } finally {
       setClosing(false);
