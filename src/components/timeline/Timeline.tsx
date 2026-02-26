@@ -11,6 +11,7 @@ import { Clock, Plus, ChevronDown, ChevronRight, Eye, EyeOff, Shield, Activity, 
 import { INDICATOR_LABEL_MAP, ALL_INDICATORS, getIndicatorBadgeColor } from "@/lib/indicators";
 import { formatCadenceDisplay, formatDurationDisplay, computeFieldDiffs } from "@/types/agreements";
 import type { VersionFields, FieldDiff } from "@/types/agreements";
+import { PLAN_LABELS } from "@/lib/planLabels";
 
 interface NoteRow {
   id: string;
@@ -124,16 +125,16 @@ function sortItems(items: TimelineItem[]): TimelineItem[] {
 }
 
 const AGREEMENT_STATUS_CONFIG: Record<string, { icon: React.ReactNode; label: string }> = {
-  created: { icon: <FileText className="h-3 w-3 text-blue-500" />, label: "Commitment created" },
-  accepted: { icon: <Check className="h-3 w-3 text-green-500" />, label: "Commitment accepted" },
-  modified: { icon: <Pencil className="h-3 w-3 text-amber-500" />, label: "Changes suggested" },
-  declined: { icon: <X className="h-3 w-3 text-red-500" />, label: "Commitment declined" },
-  withdrawn: { icon: <XCircle className="h-3 w-3 text-gray-500" />, label: "Commitment withdrawn" },
-  completed: { icon: <Check className="h-3 w-3 text-green-600" />, label: "Commitment completed" },
-  incomplete: { icon: <AlertTriangle className="h-3 w-3 text-amber-500" />, label: "Commitment incomplete" },
-  lapsed: { icon: <Clock className="h-3 w-3 text-gray-400" />, label: "Commitment lapsed" },
-  review_needed: { icon: <Clock className="h-3 w-3 text-amber-500" />, label: "Review due" },
-  self_assessed: { icon: <User className="h-3 w-3 text-blue-500" />, label: "Self-assessment" },
+  created: { icon: <FileText className="h-3 w-3 text-blue-500" />, label: PLAN_LABELS.eventCreated },
+  accepted: { icon: <Check className="h-3 w-3 text-green-500" />, label: PLAN_LABELS.eventAccepted },
+  modified: { icon: <Pencil className="h-3 w-3 text-amber-500" />, label: PLAN_LABELS.eventModified },
+  declined: { icon: <X className="h-3 w-3 text-red-500" />, label: PLAN_LABELS.eventDeclined },
+  withdrawn: { icon: <XCircle className="h-3 w-3 text-gray-500" />, label: PLAN_LABELS.eventWithdrawn },
+  completed: { icon: <Check className="h-3 w-3 text-green-600" />, label: PLAN_LABELS.eventCompleted },
+  incomplete: { icon: <AlertTriangle className="h-3 w-3 text-amber-500" />, label: PLAN_LABELS.eventIncomplete },
+  lapsed: { icon: <Clock className="h-3 w-3 text-gray-400" />, label: PLAN_LABELS.eventLapsed },
+  review_needed: { icon: <Clock className="h-3 w-3 text-amber-500" />, label: PLAN_LABELS.eventReviewNeeded },
+  self_assessed: { icon: <User className="h-3 w-3 text-blue-500" />, label: PLAN_LABELS.eventSelfAssessed },
 };
 
 export default function Timeline({ groupId, personId, members, onAddNote, isGroupMember = true, lastSeenAt }: Props) {
@@ -260,7 +261,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
 
         const collapsed: CollapsedAgreement = {
           agreement_id: agId,
-          title: finalFields?.title || titleMap[agId] || "Agreement",
+          title: finalFields?.title || titleMap[agId] || "Commitment",
           i_will_statement: finalFields?.i_will_statement,
           cadence_display: finalFields ? formatCadenceDisplay(finalFields) : undefined,
           duration_display: finalFields ? formatDurationDisplay(finalFields) : undefined,

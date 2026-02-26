@@ -31,4 +31,16 @@ export const PLAN_LABELS = {
   emptyActive: "No active commitments yet. Start by creating one together.",
   emptyPending: "Nothing needs your response right now.",
   emptyClosed: "No completed commitments yet.",
+
+  // Timeline event labels
+  eventCreated: 'Commitment created',
+  eventAccepted: 'Commitment accepted',
+  eventModified: 'Changes suggested',
+  eventDeclined: 'Commitment declined',
+  eventWithdrawn: 'Commitment withdrawn',
+  eventCompleted: 'Commitment completed',
+  eventIncomplete: 'Commitment incomplete',
+  eventLapsed: 'Commitment lapsed',
+  eventReviewNeeded: 'Review due',
+  eventSelfAssessed: 'Self-assessment',
 } as const;
