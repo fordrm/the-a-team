@@ -588,23 +588,23 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                   const terminalConfig = AGREEMENT_STATUS_CONFIG[c.terminal_status] || AGREEMENT_STATUS_CONFIG.created;
 
                   const summaryLabel =
-                    c.terminal_status === "completed" ? "Agreement completed" :
-                    c.terminal_status === "incomplete" ? "Agreement incomplete" :
-                    c.terminal_status === "lapsed" ? "Agreement lapsed" :
-                    c.terminal_status === "review_needed" ? "Review due" :
+                    c.terminal_status === "completed" ? PLAN_LABELS.eventCompleted :
+                    c.terminal_status === "incomplete" ? PLAN_LABELS.eventIncomplete :
+                    c.terminal_status === "lapsed" ? PLAN_LABELS.eventLapsed :
+                    c.terminal_status === "review_needed" ? PLAN_LABELS.eventReviewNeeded :
                     c.terminal_status === "accepted" && c.events.length > 1
-                    ? "Agreement finalized"
+                    ? "Commitment finalized"
                     : c.terminal_status === "accepted"
-                    ? "Agreement accepted"
+                    ? PLAN_LABELS.eventAccepted
                     : c.terminal_status === "declined"
-                    ? "Agreement declined"
+                    ? PLAN_LABELS.eventDeclined
                     : c.terminal_status === "withdrawn"
-                    ? "Agreement withdrawn"
+                    ? PLAN_LABELS.eventWithdrawn
                     : c.terminal_status === "modified"
                     ? "Awaiting response"
                     : c.terminal_status === "self_assessed"
                     ? "Self-assessment submitted"
-                    : "Agreement proposed";
+                    : PLAN_LABELS.eventCreated;
 
                   const participants = [
                     authorName(c.created_by),
