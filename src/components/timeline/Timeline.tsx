@@ -604,7 +604,7 @@ export default function Timeline({ groupId, personId, members, onAddNote, isGrou
                     ? "Awaiting response"
                     : c.terminal_status === "self_assessed"
                     ? "Self-assessment submitted"
-                    : PLAN_LABELS.eventCreated;
+                    : "Commitment proposed";
 
                   const participants = [
                     authorName(c.created_by),

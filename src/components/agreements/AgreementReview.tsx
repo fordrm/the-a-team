@@ -189,7 +189,7 @@ export default function AgreementReview({ agreementId, groupId, onBack, onRenew 
   return (
     <div className="space-y-4">
       <Button variant="ghost" size="sm" className="w-fit" onClick={onBack}>
-        <ArrowLeft className="mr-1 h-4 w-4" /> Back to agreement
+        <ArrowLeft className="mr-1 h-4 w-4" /> Back to commitment
       </Button>
 
       {/* Review Summary Card */}

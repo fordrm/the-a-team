@@ -239,7 +239,7 @@ export default function PersonPortal() {
     // so we use a self_assessed acceptance to signal review request
     if (!user || !personInfo) return;
     try {
-      // Find the latest version for this agreement
+      // Find the latest version for this commitment
       const { data: latestVersion } = await supabase
         .from("agreement_versions")
         .select("id")
@@ -259,7 +259,7 @@ export default function PersonPortal() {
       });
       toast({
         title: "Review requested",
-        description: "Your coordinator will be notified to review this agreement.",
+        description: "Your coordinator will be notified to review this commitment.",
       });
       refreshAgreements();
     } catch (err: any) {
@@ -508,7 +508,7 @@ export default function PersonPortal() {
                         {/* Self-assessment for review_needed */}
                         {a.status === "review_needed" && (
                           <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
-                            <p className="text-xs text-muted-foreground font-medium">How do you feel this agreement went?</p>
+                            <p className="text-xs text-muted-foreground font-medium">How do you feel this commitment went?</p>
                             <div className="grid grid-cols-2 gap-2">
                               {PERSON_ASSESSMENT_OPTIONS.map(opt => (
                                 <Button
