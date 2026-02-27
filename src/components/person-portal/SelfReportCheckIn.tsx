@@ -39,8 +39,10 @@ export default function SelfReportCheckIn({ personId, groupId, onSaved }: SelfRe
 
   const activeCount = Object.keys(indicators).filter(k => indicators[k]).length;
 
+  const canSubmit = body.trim().length > 0 || activeCount > 0;
+
   const handleSave = async (share: boolean) => {
-    if (!user || !body.trim()) return;
+    if (!user || !canSubmit) return;
     setSubmitting(true);
     try {
       // Create private self-report note
@@ -155,7 +157,7 @@ export default function SelfReportCheckIn({ personId, groupId, onSaved }: SelfRe
             variant="outline"
             className="flex-1 min-h-[44px]"
             onClick={() => handleSave(false)}
-            disabled={submitting || !body.trim()}
+            disabled={submitting || !canSubmit}
           >
             <Lock className="mr-1.5 h-4 w-4" />
             {submitting ? "Saving…" : "Save privately"}
@@ -163,7 +165,7 @@ export default function SelfReportCheckIn({ personId, groupId, onSaved }: SelfRe
           <Button
             className="flex-1 min-h-[44px]"
             onClick={() => handleSave(true)}
-            disabled={submitting || !body.trim()}
+            disabled={submitting || !canSubmit}
           >
             <Send className="mr-1.5 h-4 w-4" />
             {submitting ? "Saving…" : "Save & Share"}
